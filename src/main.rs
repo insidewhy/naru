@@ -50,6 +50,7 @@ fn main() {
   let window = initscr();
   window.refresh();
   window.keypad(true);
+  curs_set(0);
   if has_colors() {
     start_color();
     use_default_colors();
