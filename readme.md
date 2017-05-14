@@ -1,7 +1,7 @@
 # Usage
 
 ```bash
-chosen=$(ls | burning-sanders)
+chosen=$(ls | sdr)
 echo the user chose $chosen
 ```
 

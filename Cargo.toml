@@ -6,3 +6,6 @@ authors = ["James Pike <jpike@chilon.net>"]
 [dependencies]
 pancurses = "0.8"
 libc = "0.2"
+
+[[bin]]
+name = "sdr"
