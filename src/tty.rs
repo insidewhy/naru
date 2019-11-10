@@ -3,15 +3,15 @@ use std::ffi::CString;
 use std::io;
 use std::io::{Error, ErrorKind};
 use self::termios::{Termios, ICRNL, ICANON, ECHO, ISIG, TCSANOW, tcsetattr};
-use libc::{setvbuf, _IOFBF};
+use libc::{setvbuf, _IOFBF, TIOCGWINSZ, ioctl, winsize, fileno};
 
 pub struct Tty {
   fdin: i32,
   fout: * mut libc::FILE,
   original_termios: Termios,
   fg_color: i32,
-  max_width: i32,
-  max_height: i32,
+  max_width: u16,
+  max_height: u16,
 }
 
 impl Tty {
@@ -32,15 +32,20 @@ impl Tty {
       return Err(Error::new(ErrorKind::Other, "Could not setvbuf"));
     }
 
+    let mut ws = winsize { ws_row: 0, ws_col: 0, ws_xpixel: 0, ws_ypixel: 0 };
+    let result = unsafe { ioctl(fileno(fout), TIOCGWINSZ, &mut ws) };
+    if result != 0 {
+      return Err(Error::new(ErrorKind::Other, "Could not get window size"));
+    }
+
     Ok(
       Tty {
         fdin,
         fout,
         fg_color: 9,
         original_termios,
-        // TODO: query for these
-        max_width: 80,
-        max_height: 25,
+        max_width: ws.ws_col,
+        max_height: ws.ws_row,
       }
     )
   }
