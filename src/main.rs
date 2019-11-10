@@ -2,6 +2,8 @@ extern crate libc;
 use std::io;
 mod tty;
 
+const TTY_PATH: &str = "/dev/tty";
+
 fn match_input() -> io::Result<()> {
   let mut choices: Vec<String> = Vec::new();
   let mut input = String::new();
@@ -14,8 +16,7 @@ fn match_input() -> io::Result<()> {
     input.clear();
   }
 
-  let tty_path = "/dev/tty";
-  let terminal = tty::Tty::init(& tty_path)?;
+  let terminal = tty::Tty::init(&TTY_PATH)?;
 
   // TODO: enable filtering etc.
   // for choice in choices {
