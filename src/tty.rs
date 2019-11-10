@@ -3,7 +3,7 @@ use std::ffi::CString;
 use std::io;
 use std::io::{Error, ErrorKind};
 use self::termios::{Termios, ICRNL, ICANON, ECHO, ISIG, TCSANOW, tcsetattr};
-use libc::{setvbuf, _IOFBF, TIOCGWINSZ, ioctl, winsize, fileno};
+use libc::{setvbuf, _IOFBF, TIOCGWINSZ, ioctl, winsize, fileno, close, fclose};
 
 pub struct Tty {
   fdin: i32,
@@ -51,6 +51,11 @@ impl Tty {
   }
 
   pub fn reset(&self) -> io::Result<()> {
-    tcsetattr(self.fdin, TCSANOW, &self.original_termios)
+    tcsetattr(self.fdin, TCSANOW, &self.original_termios)?;
+    unsafe {
+      fclose(self.fout);
+      close(self.fdin);
+    };
+    Ok(())
   }
 }
