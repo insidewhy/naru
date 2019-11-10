@@ -37,7 +37,10 @@ fn main() {
     Err(_) => panic!("Could not initialise terminal")
   }
 
-  println!("TODO: stuff");
+  // TODO: enable filtering etc.
+  for choice in choices {
+    println!("{}", choice);
+  }
 
   /*
   let mut idx: i32 = 0;
