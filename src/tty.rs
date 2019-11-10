@@ -5,6 +5,12 @@ use std::io::{Error, ErrorKind};
 use self::termios::{Termios, ICRNL, ICANON, ECHO, ISIG, TCSANOW, tcsetattr};
 use libc::{setvbuf, _IOFBF, TIOCGWINSZ, ioctl, winsize, fileno, close, fclose};
 
+macro_rules! io_err {
+  ($x: expr) => {
+    Err(Error::new(ErrorKind::Other, $x))
+  }
+}
+
 pub struct Tty {
   fdin: i32,
   fout: * mut libc::FILE,
@@ -29,13 +35,13 @@ impl Tty {
 
     let err = unsafe { setvbuf(fout, std::ptr::null_mut(), _IOFBF, 4096) };
     if err != 0 {
-      return Err(Error::new(ErrorKind::Other, "Could not setvbuf"));
+      return io_err!("Could not setvbuf");
     }
 
     let mut ws = winsize { ws_row: 0, ws_col: 0, ws_xpixel: 0, ws_ypixel: 0 };
     let result = unsafe { ioctl(fileno(fout), TIOCGWINSZ, &mut ws) };
     if result != 0 {
-      return Err(Error::new(ErrorKind::Other, "Could not get window size"));
+      return io_err!("Could not get window size");
     }
 
     Ok(
