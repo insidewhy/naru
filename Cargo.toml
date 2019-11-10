@@ -7,8 +7,9 @@ repository = "https://github.com/ohjames/toss"
 license = "MIT"
 
 [dependencies]
-libc = "0.2"
-termios = "0.3.1"
+libc = "~0.2"
+termios = "~0.3.1"
+xdg = "^2.1"
 
 [[bin]]
 name = "toss"
