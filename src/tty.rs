@@ -45,7 +45,7 @@ impl Tty {
     )
   }
 
-  pub fn reset(&self) -> () {
-    tcsetattr(self.fdin, TCSANOW, &self.original_termios);
+  pub fn reset(&self) -> io::Result<()> {
+    tcsetattr(self.fdin, TCSANOW, &self.original_termios)
   }
 }
