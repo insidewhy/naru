@@ -1,7 +1,7 @@
 # Usage
 
 ```bash
-chosen=$(ls | sdr)
+chosen=$(ls | toss)
 echo the user chose $chosen
 ```
 
