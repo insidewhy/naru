@@ -9,6 +9,8 @@ license = "MIT"
 [dependencies]
 libc = "~0.2"
 termios = "~0.3.1"
+toml = "~0.5.5"
+serde = { version = "^1.0.102", features = ["derive"] }
 xdg = "^2.1"
 
 [[bin]]

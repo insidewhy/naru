@@ -21,7 +21,7 @@ pub struct Tty {
 }
 
 impl Tty {
-  pub fn init(tty_path: &str) -> io::Result<Tty> {
+  pub fn new(tty_path: &str) -> io::Result<Tty> {
     let tty_filename_c = CString::new(tty_path)?;
     let fdin = unsafe { libc::open(tty_filename_c.as_ptr(), libc::O_RDONLY) };
     let fout = unsafe { libc::fopen(tty_filename_c.as_ptr(), CString::new("w")?.as_ptr()) };
