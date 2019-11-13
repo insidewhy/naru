@@ -7,6 +7,18 @@ use tty::Tty;
 
 const TTY_PATH: &str = "/dev/tty";
 
+fn run_matcher(terminal: &mut Tty, conf: &Config, choices: &Vec<String>) -> io::Result<()> {
+  // TODO: enable filtering etc.
+  // for choice in choices { println!("{}", choice); }
+  for i in 0..8 {
+    terminal.set_fg(i)?;
+    terminal.putc(64 + i);
+  }
+  terminal.newline()?;
+  println!("TODO: get match");
+  Ok(())
+}
+
 fn match_input(conf: &Config) -> io::Result<()> {
   let mut choices: Vec<String> = Vec::new();
   let mut input = String::new();
@@ -19,16 +31,13 @@ fn match_input(conf: &Config) -> io::Result<()> {
     input.clear();
   }
 
-  let terminal = Tty::new(&TTY_PATH)?;
-
-  // TODO: enable filtering etc.
-  // for choice in choices { println!("{}", choice); }
-
-  terminal.reset()
+  let mut terminal = Tty::new(&TTY_PATH)?;
+  let result = run_matcher(&mut terminal, &conf, &choices);
+  terminal.reset();
+  result
 }
 
 fn main() {
   let conf = load_config().unwrap();
-  println!("{}", conf.window.height);
   match_input(&conf).unwrap();
 }

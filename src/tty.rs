@@ -3,7 +3,7 @@ use std::ffi::CString;
 use std::io;
 use std::io::{Error, ErrorKind};
 use self::termios::{Termios, ICRNL, ICANON, ECHO, ISIG, TCSANOW, tcsetattr};
-use libc::{setvbuf, _IOFBF, TIOCGWINSZ, ioctl, winsize, fileno, close, fclose};
+use libc::{setvbuf, fprintf, fputc, _IOFBF, TIOCGWINSZ, ioctl, winsize, fileno, close, fclose};
 
 // Make unsafe call and turn non-zero exit statuses into an io error with the given string when
 // needed
@@ -12,6 +12,12 @@ macro_rules! fwd_error_code {
     if unsafe { $expr != 0 } {
       return Err(Error::new(ErrorKind::Other, $msg))
     }
+  }
+}
+
+macro_rules! c_str {
+  ($expr: expr) => {
+    CString::new($expr)?.as_ptr();
   }
 }
 
@@ -28,7 +34,7 @@ impl Tty {
   pub fn new(tty_path: &str) -> io::Result<Tty> {
     let tty_filename_c = CString::new(tty_path)?;
     let fdin = unsafe { libc::open(tty_filename_c.as_ptr(), libc::O_RDONLY) };
-    let fout = unsafe { libc::fopen(tty_filename_c.as_ptr(), CString::new("w")?.as_ptr()) };
+    let fout = unsafe { libc::fopen(tty_filename_c.as_ptr(), c_str!("w")) };
 
     let original_termios = Termios::from_fd(fdin)?;
 
@@ -52,7 +58,7 @@ impl Tty {
       Tty {
         fdin,
         fout,
-        fg_color: 9,
+        fg_color: 0,
         original_termios,
         max_width: ws.ws_col,
         max_height: ws.ws_row,
@@ -60,12 +66,35 @@ impl Tty {
     )
   }
 
-  pub fn reset(&self) -> io::Result<()> {
-    tcsetattr(self.fdin, TCSANOW, &self.original_termios)?;
-    unsafe {
-      fclose(self.fout);
-      close(self.fdin);
-    };
+  pub fn sgr(&self, code: i32) -> io::Result<()>  {
+    unsafe { fprintf(self.fout, c_str!("%c%c%im"), 0x1b, '[', code) };
     Ok(())
+  }
+
+  pub fn set_fg(&mut self, color: i32) -> io::Result<()> {
+    if self.fg_color != color {
+      self.sgr(30 + color)?;
+      self.fg_color = color;
+    }
+    Ok(())
+  }
+
+  pub fn putc(&self, c: i32) {
+    unsafe { fputc(c, self.fout) };
+  }
+
+  pub fn newline(&self) -> io::Result<()> {
+    unsafe { fprintf(self.fout, c_str!("%c%cK\n"), 0x1b, '[') };
+    Ok(())
+  }
+
+  pub fn reset(&mut self) {
+    let _ = self.set_fg(0);
+    unsafe { fclose(self.fout); }
+    // it isn't the best if we can't reset the terminal but at least don't mess with
+    // the output of the matches
+    if tcsetattr(self.fdin, TCSANOW, &self.original_termios).is_ok() {
+      unsafe { close(self.fdin); }
+    }
   }
 }
