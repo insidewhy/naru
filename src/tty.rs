@@ -5,9 +5,13 @@ use std::io::{Error, ErrorKind};
 use self::termios::{Termios, ICRNL, ICANON, ECHO, ISIG, TCSANOW, tcsetattr};
 use libc::{setvbuf, _IOFBF, TIOCGWINSZ, ioctl, winsize, fileno, close, fclose};
 
-macro_rules! io_err {
-  ($x: expr) => {
-    Err(Error::new(ErrorKind::Other, $x))
+// Make unsafe call and turn non-zero exit statuses into an io error with the given string when
+// needed
+macro_rules! fwd_error_code {
+  ($expr: expr, $msg: expr) => {
+    if unsafe { $expr != 0 } {
+      return Err(Error::new(ErrorKind::Other, $msg))
+    }
   }
 }
 
@@ -33,16 +37,16 @@ impl Tty {
     termios_copy.c_lflag &= !(ICANON | ECHO | ISIG);
     tcsetattr(fdin, TCSANOW, &termios_copy)?;
 
-    let err = unsafe { setvbuf(fout, std::ptr::null_mut(), _IOFBF, 4096) };
-    if err != 0 {
-      return io_err!("Could not setvbuf");
-    }
+    fwd_error_code!(
+      setvbuf(fout, std::ptr::null_mut(), _IOFBF, 4096),
+      "Could not setvbuf"
+    );
 
     let mut ws = winsize { ws_row: 0, ws_col: 0, ws_xpixel: 0, ws_ypixel: 0 };
-    let result = unsafe { ioctl(fileno(fout), TIOCGWINSZ, &mut ws) };
-    if result != 0 {
-      return io_err!("Could not get window size");
-    }
+    fwd_error_code!(
+      ioctl(fileno(fout), TIOCGWINSZ, &mut ws),
+      "Could not get window size"
+    );
 
     Ok(
       Tty {
