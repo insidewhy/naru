@@ -15,6 +15,14 @@ macro_rules! fwd_error_code {
   }
 }
 
+macro_rules! terminal_printf {
+  ($self: expr, $($expr: expr),+) => {
+    if unsafe { fprintf($self.fout, $($expr),+) < 0 } {
+      return Err(Error::new(ErrorKind::Other, "Error printing to console"))
+    }
+  }
+}
+
 macro_rules! c_str {
   ($expr: expr) => {
     CString::new($expr)?.as_ptr();
@@ -67,7 +75,7 @@ impl Tty {
   }
 
   pub fn sgr(&self, code: i32) -> io::Result<()>  {
-    unsafe { fprintf(self.fout, c_str!("%c%c%im"), 0x1b, '[', code) };
+    terminal_printf!(self, c_str!("%c%c%im"), 0x1b, '[', code);
     Ok(())
   }
 
@@ -84,7 +92,7 @@ impl Tty {
   }
 
   pub fn newline(&self) -> io::Result<()> {
-    unsafe { fprintf(self.fout, c_str!("%c%cK\n"), 0x1b, '[') };
+    terminal_printf!(self, c_str!("%c%cK\n"), 0x1b, '[');
     Ok(())
   }
 
