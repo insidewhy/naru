@@ -51,7 +51,7 @@ fn selector(mut terminal: &mut Tty, conf: &Config, choices: &Vec<String>) -> io:
   draw_matches(&mut terminal, &choices, height, selected)?;
 
   // TODO: wait for input etc.
-  std::thread::sleep(std::time::Duration::from_secs(10));
+  std::thread::sleep(std::time::Duration::from_secs(1));
 
   Ok(())
 }
@@ -71,6 +71,8 @@ fn match_input(conf: &Config) -> io::Result<()> {
   let mut terminal = Tty::new(&TTY_PATH)?;
   let result = selector(&mut terminal, &conf, &choices);
 
+  terminal.set_col(0)?;
+  terminal.clearline()?;
   terminal.set_normal()?;
   terminal.reset();
   println!("TODO: get match");
