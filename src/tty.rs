@@ -38,6 +38,7 @@ pub struct Tty {
   max_height: u16,
 
   sgr_format: CString,
+  clearline_format: CString,
   newline_format: CString,
 }
 
@@ -75,6 +76,7 @@ impl Tty {
         max_height: ws.ws_row,
 
         sgr_format: CString::new("\u{1b}[%im")?,
+        clearline_format: CString::new("\u{1b}[K")?,
         newline_format: CString::new("\u{1b}[K\n")?,
       }
     )
@@ -97,6 +99,13 @@ impl Tty {
     unsafe { fputc(c, self.fout) };
   }
 
+  // Remove everything after cursor
+  pub fn clearline(&self) -> io::Result<()> {
+    terminal_printf!(self, self.clearline_format.as_ptr());
+    Ok(())
+  }
+
+  // Remove everything after cursor then move to next line
   pub fn newline(&self) -> io::Result<()> {
     terminal_printf!(self, self.newline_format.as_ptr());
     Ok(())
