@@ -1,14 +1,19 @@
 extern crate libc;
 mod config;
 mod tty;
+use config::{load_config, Config};
 use std::io;
-use config::{Config, load_config};
 use tty::Tty;
 
 const TTY_PATH: &str = "/dev/tty";
 
-fn draw_matches(terminal: &mut Tty, choices: &Vec<String>, height: u16, selected: i32) -> io::Result<()> {
-  for line in 0..height-1 {
+fn draw_matches(
+  terminal: &mut Tty,
+  choices: &Vec<String>,
+  height: u16,
+  selected: i32,
+) -> io::Result<()> {
+  for line in 0..height - 1 {
     terminal.newline()?;
 
     if line == (selected as u16) {

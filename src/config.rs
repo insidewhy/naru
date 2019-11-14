@@ -1,10 +1,10 @@
 extern crate serde;
 extern crate toml;
 extern crate xdg;
+use self::serde::Deserialize;
+use std::fs::File;
 use std::io;
 use std::io::Read;
-use std::fs::File;
-use self::serde::Deserialize;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -27,7 +27,9 @@ pub struct Config {
 
 impl Default for Config {
   fn default() -> Self {
-    Self { window: Default::default() }
+    Self {
+      window: Default::default(),
+    }
   }
 }
 
@@ -36,9 +38,7 @@ pub fn load_config() -> io::Result<Config> {
   let cfg_file = xdg_dirs.find_config_file("naru.toml");
 
   match cfg_file {
-    None => {
-      Ok(Default::default())
-    }
+    None => Ok(Default::default()),
 
     Some(v) => {
       let path = v.to_str().unwrap();

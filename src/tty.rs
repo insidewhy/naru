@@ -1,18 +1,20 @@
 extern crate termios;
+use self::termios::{tcsetattr, Termios, ECHO, ICANON, ICRNL, ISIG, TCSANOW};
+use libc::{
+  close, fclose, fflush, fileno, fprintf, fputc, ioctl, setvbuf, winsize, TIOCGWINSZ, _IOFBF,
+};
 use std::ffi::CString;
 use std::io;
 use std::io::{Error, ErrorKind};
-use self::termios::{Termios, ICRNL, ICANON, ECHO, ISIG, TCSANOW, tcsetattr};
-use libc::{setvbuf, fprintf, fputc, _IOFBF, TIOCGWINSZ, ioctl, winsize, fileno, close, fclose, fflush};
 
 // Make unsafe call and turn non-zero exit statuses into an io error with the given string when
 // needed
 macro_rules! fwd_error_code {
   ($expr: expr, $msg: expr) => {
     if unsafe { $expr != 0 } {
-      return Err(Error::new(ErrorKind::Other, $msg))
+      return Err(Error::new(ErrorKind::Other, $msg));
     }
-  }
+  };
 }
 
 macro_rules! terminal_printf {
@@ -26,12 +28,12 @@ macro_rules! terminal_printf {
 macro_rules! c_str {
   ($expr: expr) => {
     CString::new($expr)?.as_ptr();
-  }
+  };
 }
 
 pub struct Tty {
   fdin: i32,
-  fout: * mut libc::FILE,
+  fout: *mut libc::FILE,
   original_termios: Termios,
   fg_color: i32,
   pub max_width: u16,
@@ -62,31 +64,34 @@ impl Tty {
       "Could not setvbuf"
     );
 
-    let mut ws = winsize { ws_row: 0, ws_col: 0, ws_xpixel: 0, ws_ypixel: 0 };
+    let mut ws = winsize {
+      ws_row: 0,
+      ws_col: 0,
+      ws_xpixel: 0,
+      ws_ypixel: 0,
+    };
     fwd_error_code!(
       ioctl(fileno(fout), TIOCGWINSZ, &mut ws),
       "Could not get window size"
     );
 
-    Ok(
-      Tty {
-        fdin,
-        fout,
-        fg_color: 9,
-        original_termios,
-        max_width: ws.ws_col,
-        max_height: ws.ws_row,
+    Ok(Tty {
+      fdin,
+      fout,
+      fg_color: 9,
+      original_termios,
+      max_width: ws.ws_col,
+      max_height: ws.ws_row,
 
-        sgr_format: CString::new("\u{1b}[%im")?,
-        clearline_format: CString::new("\u{1b}[K")?,
-        newline_format: CString::new("\u{1b}[K\n")?,
-        move_up_format: CString::new("\u{1b}[%iA")?,
-        set_col_format: CString::new("\u{1b}[%iG")?,
-      }
-    )
+      sgr_format: CString::new("\u{1b}[%im")?,
+      clearline_format: CString::new("\u{1b}[K")?,
+      newline_format: CString::new("\u{1b}[K\n")?,
+      move_up_format: CString::new("\u{1b}[%iA")?,
+      set_col_format: CString::new("\u{1b}[%iG")?,
+    })
   }
 
-  pub fn sgr(&self, code: i32) -> io::Result<()>  {
+  pub fn sgr(&self, code: i32) -> io::Result<()> {
     terminal_printf!(self, self.sgr_format.as_ptr(), code);
     Ok(())
   }
@@ -147,11 +152,15 @@ impl Tty {
   }
 
   pub fn reset(&mut self) {
-    unsafe { fclose(self.fout); }
+    unsafe {
+      fclose(self.fout);
+    }
     // it isn't the best if we can't reset the terminal but at least don't mess with
     // the output of the matches
     if tcsetattr(self.fdin, TCSANOW, &self.original_termios).is_ok() {
-      unsafe { close(self.fdin); }
+      unsafe {
+        close(self.fdin);
+      }
     }
   }
 }
