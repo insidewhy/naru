@@ -33,7 +33,7 @@ impl Default for Config {
 
 pub fn load_config() -> io::Result<Config> {
   let xdg_dirs = xdg::BaseDirectories::new()?;
-  let cfg_file = xdg_dirs.find_config_file("toss.toml");
+  let cfg_file = xdg_dirs.find_config_file("naru.toml");
 
   match cfg_file {
     None => {

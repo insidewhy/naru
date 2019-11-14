@@ -1,9 +1,9 @@
 [package]
-name = "toss"
+name = "naru"
 version = "0.2.0"
 authors = ["James Pike <github@chilon.net>"]
 description = "A selector like fzu and fzy"
-repository = "https://github.com/ohjames/toss"
+repository = "https://github.com/ohjames/naru"
 license = "MIT"
 
 [dependencies]
@@ -14,4 +14,4 @@ serde = { version = "^1.0.102", features = ["derive"] }
 xdg = "^2.1"
 
 [[bin]]
-name = "toss"
+name = "naru"
