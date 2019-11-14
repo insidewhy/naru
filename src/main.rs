@@ -7,15 +7,47 @@ use tty::Tty;
 
 const TTY_PATH: &str = "/dev/tty";
 
-fn run_matcher(terminal: &mut Tty, conf: &Config, choices: &Vec<String>) -> io::Result<()> {
-  // TODO: enable filtering etc.
-  // for choice in choices { println!("{}", choice); }
-  for i in 0..8 {
-    terminal.set_fg(i)?;
-    terminal.putc(64 + i);
+fn draw_matches(terminal: &mut Tty, choices: &Vec<String>, height: u16, selected: i32) -> io::Result<()> {
+  for line in 0..height-1 {
+    terminal.newline()?;
+
+    if line == (selected as u16) {
+      terminal.set_invert()?;
+    }
+
+    // TODO: enable filtering etc.
+    // for choice in choices { println!("{}", choice); }
+    for i in 0..8 {
+      terminal.set_fg(i)?;
+      terminal.putc(64 + i);
+    }
+
+    if line == (selected as u16) {
+      terminal.set_normal()?;
+    }
   }
-  terminal.newline()?;
-  println!("TODO: get match");
+
+  // move to the "top"
+  terminal.move_up((height - 1) as i32)?;
+  terminal.set_normal()?;
+  terminal.set_col(0)?;
+  terminal.print("> ")?;
+  terminal.clearline()?;
+
+  terminal.flush();
+
+  Ok(())
+}
+
+fn selector(mut terminal: &mut Tty, conf: &Config, choices: &Vec<String>) -> io::Result<()> {
+  let height = std::cmp::min(conf.window.height, terminal.max_height);
+
+  let mut selected = 0;
+  draw_matches(&mut terminal, &choices, height, selected)?;
+
+  // TODO: wait for input etc.
+  std::thread::sleep(std::time::Duration::from_secs(10));
+
   Ok(())
 }
 
@@ -32,8 +64,11 @@ fn match_input(conf: &Config) -> io::Result<()> {
   }
 
   let mut terminal = Tty::new(&TTY_PATH)?;
-  let result = run_matcher(&mut terminal, &conf, &choices);
+  let result = selector(&mut terminal, &conf, &choices);
+
+  terminal.set_normal()?;
   terminal.reset();
+  println!("TODO: get match");
   result
 }
 

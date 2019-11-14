@@ -3,7 +3,7 @@ use std::ffi::CString;
 use std::io;
 use std::io::{Error, ErrorKind};
 use self::termios::{Termios, ICRNL, ICANON, ECHO, ISIG, TCSANOW, tcsetattr};
-use libc::{setvbuf, fprintf, fputc, _IOFBF, TIOCGWINSZ, ioctl, winsize, fileno, close, fclose};
+use libc::{setvbuf, fprintf, fputc, _IOFBF, TIOCGWINSZ, ioctl, winsize, fileno, close, fclose, fflush};
 
 // Make unsafe call and turn non-zero exit statuses into an io error with the given string when
 // needed
@@ -34,12 +34,14 @@ pub struct Tty {
   fout: * mut libc::FILE,
   original_termios: Termios,
   fg_color: i32,
-  max_width: u16,
-  max_height: u16,
+  pub max_width: u16,
+  pub max_height: u16,
 
   sgr_format: CString,
   clearline_format: CString,
   newline_format: CString,
+  move_up_format: CString,
+  set_col_format: CString,
 }
 
 impl Tty {
@@ -70,7 +72,7 @@ impl Tty {
       Tty {
         fdin,
         fout,
-        fg_color: 0,
+        fg_color: 9,
         original_termios,
         max_width: ws.ws_col,
         max_height: ws.ws_row,
@@ -78,6 +80,8 @@ impl Tty {
         sgr_format: CString::new("\u{1b}[%im")?,
         clearline_format: CString::new("\u{1b}[K")?,
         newline_format: CString::new("\u{1b}[K\n")?,
+        move_up_format: CString::new("\u{1b}[%iA")?,
+        set_col_format: CString::new("\u{1b}[%iG")?,
       }
     )
   }
@@ -95,8 +99,30 @@ impl Tty {
     Ok(())
   }
 
+  pub fn set_invert(&self) -> io::Result<()> {
+    self.sgr(7)
+  }
+
+  pub fn move_up(&self, row_count: i32) -> io::Result<()> {
+    terminal_printf!(self, self.move_up_format.as_ptr(), row_count);
+    Ok(())
+  }
+
+  // pub fn set_underline(&self) -> io::Result<()> { self.sgr(4) }
+
+  pub fn set_normal(&mut self) -> io::Result<()> {
+    self.sgr(0)?;
+    self.fg_color = 9;
+    Ok(())
+  }
+
   pub fn putc(&self, c: i32) {
     unsafe { fputc(c, self.fout) };
+  }
+
+  pub fn print(&self, string: &str) -> io::Result<()> {
+    terminal_printf!(self, CString::new(string)?.as_ptr());
+    Ok(())
   }
 
   // Remove everything after cursor
@@ -111,8 +137,16 @@ impl Tty {
     Ok(())
   }
 
+  pub fn flush(&self) {
+    unsafe { fflush(self.fout) };
+  }
+
+  pub fn set_col(&self, col: i32) -> io::Result<()> {
+    terminal_printf!(self, self.set_col_format.as_ptr(), col + 1);
+    Ok(())
+  }
+
   pub fn reset(&mut self) {
-    let _ = self.set_fg(0);
     unsafe { fclose(self.fout); }
     // it isn't the best if we can't reset the terminal but at least don't mess with
     // the output of the matches
