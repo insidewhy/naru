@@ -44,6 +44,8 @@ pub struct Tty {
   newline_format: CString,
   move_up_format: CString,
   set_col_format: CString,
+  no_wrap_format: CString,
+  wrap_format: CString,
 }
 
 impl Tty {
@@ -88,6 +90,8 @@ impl Tty {
       newline_format: CString::new("\u{1b}[K\n")?,
       move_up_format: CString::new("\u{1b}[%iA")?,
       set_col_format: CString::new("\u{1b}[%iG")?,
+      no_wrap_format: CString::new("\u{1b}[?7l")?,
+      wrap_format: CString::new("\u{1b}[?7h")?,
     })
   }
 
@@ -108,8 +112,13 @@ impl Tty {
     self.sgr(7)
   }
 
-  pub fn move_up(&self, row_count: i32) -> io::Result<()> {
-    terminal_printf!(self, self.move_up_format.as_ptr(), row_count);
+  pub fn set_no_wrap(&self) -> io::Result<()> {
+    terminal_printf!(self, self.no_wrap_format.as_ptr());
+    Ok(())
+  }
+
+  pub fn set_wrap(&self) -> io::Result<()> {
+    terminal_printf!(self, self.wrap_format.as_ptr());
     Ok(())
   }
 
@@ -118,6 +127,11 @@ impl Tty {
   pub fn set_normal(&mut self) -> io::Result<()> {
     self.sgr(0)?;
     self.fg_color = 9;
+    Ok(())
+  }
+
+  pub fn move_up(&self, row_count: i32) -> io::Result<()> {
+    terminal_printf!(self, self.move_up_format.as_ptr(), row_count);
     Ok(())
   }
 

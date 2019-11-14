@@ -69,8 +69,11 @@ fn match_input(conf: &Config) -> io::Result<()> {
   }
 
   let mut terminal = Tty::new(&TTY_PATH)?;
+  terminal.set_no_wrap()?;
+
   let result = selector(&mut terminal, &conf, &choices);
 
+  terminal.set_wrap()?;
   terminal.set_col(0)?;
   terminal.clearline()?;
   terminal.set_normal()?;
