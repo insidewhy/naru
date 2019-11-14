@@ -36,6 +36,9 @@ pub struct Tty {
   fg_color: i32,
   max_width: u16,
   max_height: u16,
+
+  sgr_format: CString,
+  newline_format: CString,
 }
 
 impl Tty {
@@ -70,12 +73,15 @@ impl Tty {
         original_termios,
         max_width: ws.ws_col,
         max_height: ws.ws_row,
+
+        sgr_format: CString::new("\u{1b}[%im")?,
+        newline_format: CString::new("\u{1b}[K\n")?,
       }
     )
   }
 
   pub fn sgr(&self, code: i32) -> io::Result<()>  {
-    terminal_printf!(self, c_str!("%c%c%im"), 0x1b, '[', code);
+    terminal_printf!(self, self.sgr_format.as_ptr(), code);
     Ok(())
   }
 
@@ -92,7 +98,7 @@ impl Tty {
   }
 
   pub fn newline(&self) -> io::Result<()> {
-    terminal_printf!(self, c_str!("%c%cK\n"), 0x1b, '[');
+    terminal_printf!(self, self.newline_format.as_ptr());
     Ok(())
   }
 
