@@ -79,14 +79,10 @@ fn match_input(conf: &Config) -> io::Result<()> {
   terminal.clearline()?;
   terminal.set_normal()?;
   terminal.reset();
-  match result {
-    Ok(selected) => {
-      println!("{}", selected);
-      Ok(())
-    }
-
-    Err(error) => Err(error),
-  }
+  result.map(|selected| {
+    println!("{}", selected);
+    ()
+  })
 }
 
 fn main() {
