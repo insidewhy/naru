@@ -11,29 +11,26 @@ fn draw_matches(
   terminal: &mut Tty,
   choices: &Vec<String>,
   height: u16,
-  selected: i32,
+  selected: usize,
 ) -> io::Result<()> {
-  for line in 0..height - 1 {
+  let line_count = std::cmp::min(height as usize, choices.len() + 1);
+
+  for line_idx in 0..line_count - 1 {
     terminal.newline()?;
 
-    if line == (selected as u16) {
+    if line_idx == selected {
       terminal.set_invert()?;
     }
 
-    // TODO: enable filtering etc.
-    // for choice in choices { println!("{}", choice); }
-    for i in 0..8 {
-      terminal.set_fg(i)?;
-      terminal.putc(64 + i);
-    }
+    terminal.print(choices[line_idx].as_str())?;
 
-    if line == (selected as u16) {
+    if line_idx == selected {
       terminal.set_normal()?;
     }
   }
 
   // move to the "top"
-  terminal.move_up((height - 1) as i32)?;
+  terminal.move_up((line_count - 1) as i32)?;
   terminal.set_normal()?;
   terminal.set_col(0)?;
   terminal.print("> ")?;
