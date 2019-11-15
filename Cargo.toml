@@ -1,6 +1,6 @@
 [package]
 name = "naru"
-version = "0.2.0"
+version = "0.2.2"
 authors = ["James Pike <github@chilon.net>"]
 description = "A selector like fzu and fzy"
 repository = "https://github.com/ohjames/naru"

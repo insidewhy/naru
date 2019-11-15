@@ -41,7 +41,11 @@ fn draw_matches(
   Ok(())
 }
 
-fn selector(mut terminal: &mut Tty, conf: &Config, choices: &Vec<String>) -> io::Result<()> {
+fn selector<'a>(
+  mut terminal: &mut Tty,
+  conf: &Config,
+  choices: &'a Vec<String>,
+) -> io::Result<&'a String> {
   let height = std::cmp::min(conf.window.height, terminal.max_height);
 
   let mut selected = 0;
@@ -50,7 +54,7 @@ fn selector(mut terminal: &mut Tty, conf: &Config, choices: &Vec<String>) -> io:
   // TODO: wait for input etc.
   std::thread::sleep(std::time::Duration::from_secs(1));
 
-  Ok(())
+  Ok(&choices[selected])
 }
 
 fn match_input(conf: &Config) -> io::Result<()> {
@@ -75,8 +79,14 @@ fn match_input(conf: &Config) -> io::Result<()> {
   terminal.clearline()?;
   terminal.set_normal()?;
   terminal.reset();
-  println!("TODO: get match");
-  result
+  match result {
+    Ok(selected) => {
+      println!("{}", selected);
+      Ok(())
+    }
+
+    Err(error) => Err(error),
+  }
 }
 
 fn main() {
