@@ -1,11 +1,12 @@
-extern crate termios;
-use self::termios::{tcsetattr, Termios, ECHO, ICANON, ICRNL, ISIG, TCSANOW};
 use libc::{
   close, fclose, fflush, fileno, fprintf, fputc, ioctl, setvbuf, winsize, TIOCGWINSZ, _IOFBF,
 };
-use std::ffi::CString;
-use std::io;
-use std::io::{Error, ErrorKind};
+use std::{
+  ffi::CString,
+  io,
+  io::{Error, ErrorKind},
+};
+use termios::{tcsetattr, Termios, ECHO, ICANON, ICRNL, ISIG, TCSANOW};
 
 // Make unsafe call and turn non-zero exit statuses into an io error with the given string when
 // needed
@@ -31,7 +32,7 @@ macro_rules! c_str {
   };
 }
 
-pub struct Tty {
+pub(crate) struct Tty {
   fdin: i32,
   fout: *mut libc::FILE,
   original_termios: Termios,

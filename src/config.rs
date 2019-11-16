@@ -1,14 +1,11 @@
-extern crate serde;
-extern crate toml;
-extern crate xdg;
-use self::serde::Deserialize;
-use std::fs::File;
+use serde::Deserialize;
 use std::io;
-use std::io::Read;
+use toml;
+use xdg;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct WindowConfig {
+pub(crate) struct WindowConfig {
   pub height: u16,
 }
 
@@ -20,7 +17,7 @@ impl Default for WindowConfig {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Config {
+pub(crate) struct Config {
   #[serde(default)]
   pub window: WindowConfig,
 }
@@ -33,7 +30,7 @@ impl Default for Config {
   }
 }
 
-pub fn load_config() -> io::Result<Config> {
+pub(crate) fn load_config() -> io::Result<Config> {
   let xdg_dirs = xdg::BaseDirectories::new()?;
   let cfg_file = xdg_dirs.find_config_file("naru.toml");
 
@@ -42,9 +39,7 @@ pub fn load_config() -> io::Result<Config> {
 
     Some(v) => {
       let path = v.to_str().unwrap();
-      let mut file = File::open(path)?;
-      let mut content = String::new();
-      file.read_to_string(&mut content)?;
+      let content = std::fs::read_to_string(path)?;
       Ok(toml::from_str(&content)?)
     }
   }

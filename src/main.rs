@@ -1,4 +1,3 @@
-extern crate libc;
 mod config;
 mod tty;
 use config::{load_config, Config};
@@ -85,7 +84,8 @@ fn match_input(conf: &Config) -> io::Result<()> {
   })
 }
 
-fn main() {
-  let conf = load_config().unwrap();
-  match_input(&conf).unwrap();
+fn main() -> io::Result<()> {
+  let conf = load_config()?;
+  match_input(&conf)?;
+  Ok(())
 }
