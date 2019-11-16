@@ -27,8 +27,10 @@ macro_rules! terminal_printf {
 }
 
 macro_rules! def_c_str {
-  ($name: ident = $string: expr) => {
-    const $name: &'static [u8] = $string;
+  ($($name: ident = $string: expr);+;) => {
+    $(
+      const $name: &'static [u8] = $string;
+    )+
   };
 }
 
@@ -38,14 +40,16 @@ macro_rules! c_str {
   };
 }
 
-def_c_str!(WRITE_FORMAT = b"w\0");
-def_c_str!(CLEAR_LINE_FORMAT = b"\x1b[K\0");
-def_c_str!(SGR_FORMAT = b"\x1b[%im\0");
-def_c_str!(NEWLINE_FORMAT = b"\x1b[K\n\0");
-def_c_str!(MOVE_UP_FORMAT = b"\x1b[%iA\0");
-def_c_str!(SET_COL_FORMAT = b"\x1b[%iG\0");
-def_c_str!(NO_WRAP_FORMAT = b"\x1b[?7l\0");
-def_c_str!(WRAP_FORMAT = b"\x1b[?7h\0");
+def_c_str! {
+  WRITE_FORMAT = b"w\0";
+  CLEAR_LINE_FORMAT = b"\x1b[K\0";
+  SGR_FORMAT = b"\x1b[%im\0";
+  NEWLINE_FORMAT = b"\x1b[K\n\0";
+  MOVE_UP_FORMAT = b"\x1b[%iA\0";
+  SET_COL_FORMAT = b"\x1b[%iG\0";
+  NO_WRAP_FORMAT = b"\x1b[?7l\0";
+  WRAP_FORMAT = b"\x1b[?7h\0";
+}
 
 pub(crate) struct Tty {
   fdin: i32,
