@@ -26,19 +26,9 @@ macro_rules! terminal_printf {
   }
 }
 
-macro_rules! def_c_str {
-  ($($name: ident = $string: expr);+;) => {
-    $(
-      const $name: &'static [u8] = $string;
-    )+
-  };
-}
-
-macro_rules! c_str {
-  ($str: ident) => {
-    $str.as_ptr() as *const i8;
-  };
-}
+#[macro_use]
+#[path = "c_str.rs"]
+mod c_str;
 
 def_c_str! {
   WRITE_FORMAT = b"w\0";
