@@ -26,11 +26,26 @@ macro_rules! terminal_printf {
   }
 }
 
-macro_rules! c_str {
-  ($expr: expr) => {
-    CString::new($expr)?.as_ptr();
+macro_rules! def_c_str {
+  ($name: ident = $string: expr) => {
+    const $name: &'static [u8] = $string;
   };
 }
+
+macro_rules! c_str {
+  ($str: ident) => {
+    $str.as_ptr() as *const i8;
+  };
+}
+
+def_c_str!(WRITE_FORMAT = b"w\0");
+def_c_str!(CLEAR_LINE_FORMAT = b"\x1b[K\0");
+def_c_str!(SGR_FORMAT = b"\x1b[%im\0");
+def_c_str!(NEWLINE_FORMAT = b"\x1b[K\n\0");
+def_c_str!(MOVE_UP_FORMAT = b"\x1b[%iA\0");
+def_c_str!(SET_COL_FORMAT = b"\x1b[%iG\0");
+def_c_str!(NO_WRAP_FORMAT = b"\x1b[?7l\0");
+def_c_str!(WRAP_FORMAT = b"\x1b[?7h\0");
 
 pub(crate) struct Tty {
   fdin: i32,
@@ -39,21 +54,13 @@ pub(crate) struct Tty {
   fg_color: i32,
   pub max_width: u16,
   pub max_height: u16,
-
-  sgr_format: CString,
-  clearline_format: CString,
-  newline_format: CString,
-  move_up_format: CString,
-  set_col_format: CString,
-  no_wrap_format: CString,
-  wrap_format: CString,
 }
 
 impl Tty {
   pub fn new(tty_path: &str) -> io::Result<Tty> {
     let tty_filename_c = CString::new(tty_path)?;
     let fdin = unsafe { libc::open(tty_filename_c.as_ptr(), libc::O_RDONLY) };
-    let fout = unsafe { libc::fopen(tty_filename_c.as_ptr(), c_str!("w")) };
+    let fout = unsafe { libc::fopen(tty_filename_c.as_ptr(), c_str!(WRITE_FORMAT)) };
 
     let original_termios = Termios::from_fd(fdin)?;
 
@@ -85,19 +92,11 @@ impl Tty {
       original_termios,
       max_width: ws.ws_col,
       max_height: ws.ws_row,
-
-      sgr_format: CString::new("\u{1b}[%im")?,
-      clearline_format: CString::new("\u{1b}[K")?,
-      newline_format: CString::new("\u{1b}[K\n")?,
-      move_up_format: CString::new("\u{1b}[%iA")?,
-      set_col_format: CString::new("\u{1b}[%iG")?,
-      no_wrap_format: CString::new("\u{1b}[?7l")?,
-      wrap_format: CString::new("\u{1b}[?7h")?,
     })
   }
 
   pub fn sgr(&self, code: i32) -> io::Result<()> {
-    terminal_printf!(self, self.sgr_format.as_ptr(), code);
+    terminal_printf!(self, c_str!(SGR_FORMAT), code);
     Ok(())
   }
 
@@ -114,12 +113,12 @@ impl Tty {
   }
 
   pub fn set_no_wrap(&self) -> io::Result<()> {
-    terminal_printf!(self, self.no_wrap_format.as_ptr());
+    terminal_printf!(self, c_str!(NO_WRAP_FORMAT));
     Ok(())
   }
 
   pub fn set_wrap(&self) -> io::Result<()> {
-    terminal_printf!(self, self.wrap_format.as_ptr());
+    terminal_printf!(self, c_str!(WRAP_FORMAT));
     Ok(())
   }
 
@@ -132,7 +131,7 @@ impl Tty {
   }
 
   pub fn move_up(&self, row_count: i32) -> io::Result<()> {
-    terminal_printf!(self, self.move_up_format.as_ptr(), row_count);
+    terminal_printf!(self, c_str!(MOVE_UP_FORMAT), row_count);
     Ok(())
   }
 
@@ -147,13 +146,13 @@ impl Tty {
 
   // Remove everything after cursor
   pub fn clearline(&self) -> io::Result<()> {
-    terminal_printf!(self, self.clearline_format.as_ptr());
+    terminal_printf!(self, c_str!(CLEAR_LINE_FORMAT));
     Ok(())
   }
 
   // Remove everything after cursor then move to next line
   pub fn newline(&self) -> io::Result<()> {
-    terminal_printf!(self, self.newline_format.as_ptr());
+    terminal_printf!(self, c_str!(NEWLINE_FORMAT));
     Ok(())
   }
 
@@ -162,7 +161,7 @@ impl Tty {
   }
 
   pub fn set_col(&self, col: i32) -> io::Result<()> {
-    terminal_printf!(self, self.set_col_format.as_ptr(), col + 1);
+    terminal_printf!(self, c_str!(SET_COL_FORMAT), col + 1);
     Ok(())
   }
 
