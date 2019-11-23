@@ -1,6 +1,7 @@
 use libc::{
-  c_void, close, fclose, fflush, fileno, fprintf, fputc, ioctl, read, setvbuf, winsize, TIOCGWINSZ,
-  _IOFBF,
+  c_int, c_void, close, fclose, fd_set, fflush, fileno, fprintf, fputc, ioctl, pselect, read,
+  setvbuf, sigemptyset, sighandler_t, signal, sigset_t, winsize, EINTR, FD_ISSET, FD_SET, FD_ZERO,
+  SIGWINCH, TIOCGWINSZ, _IOFBF,
 };
 use std::{
   ffi::CString,
@@ -50,8 +51,16 @@ pub(crate) struct Tty {
   pub max_height: u16,
 }
 
+extern "C" fn winch_handler(_: c_int) {}
+
+fn get_winch_handler() -> sighandler_t {
+  winch_handler as extern "C" fn(c_int) as *mut c_void as sighandler_t
+}
+
 impl Tty {
   pub fn new(tty_path: &str) -> io::Result<Tty> {
+    unsafe { signal(SIGWINCH, get_winch_handler()) };
+
     let tty_filename_c = CString::new(tty_path)?;
     let fdin = unsafe { libc::open(tty_filename_c.as_ptr(), libc::O_RDONLY) };
     let fout = unsafe { libc::fopen(tty_filename_c.as_ptr(), WRITE_FORMAT.as_ptr()) };
@@ -181,27 +190,55 @@ pub(crate) struct TtyReader {
   fdin: i32,
 }
 
+macro_rules! uninit_mem {
+  () => {
+    unsafe { std::mem::MaybeUninit::zeroed().assume_init() }
+  };
+}
+
 impl TtyReader {
   pub fn read(&self) -> Option<[u8; 5]> {
+    // pselect before the read so that the WINCH signal can interrupt
+    loop {
+      let mut fdset: fd_set = uninit_mem!();
+      unsafe {
+        FD_ZERO(&mut fdset);
+        FD_SET(self.fdin, &mut fdset);
+      }
+
+      let mut sig_mask: sigset_t = uninit_mem!();
+      unsafe {
+        sigemptyset(&mut sig_mask);
+      }
+
+      let err = unsafe {
+        pselect(
+          self.fdin + 1,
+          &mut fdset,
+          std::ptr::null_mut(),
+          std::ptr::null_mut(),
+          std::ptr::null_mut(),
+          &sig_mask,
+        )
+      };
+
+      if err < 0 {
+        if Error::last_os_error().raw_os_error() == Some(EINTR) {
+          return None;
+        } else {
+          // TODO: raise error
+          return None;
+        }
+      } else if unsafe { FD_ISSET(self.fdin, &mut fdset) } {
+        break;
+      }
+    }
+
     let mut input: [u8; 5] = [0; 5];
     let n_read = unsafe { read(self.fdin, input.as_mut_ptr() as *mut c_void, 4) };
 
-    // loop {
-    //   unsafe {
-    //     // let mut fdset: fd_set = std::mem::uninitialized::<libc::fd_set>();
-    //     let mut fdset: fd_set = std::mem::MaybeUninit::zeroed().assume_init();
-    //     FD_ZERO(&mut fdset);
-    //     FD_SET(self.fdin, &mut fdset);
-    //     let timeout = timespec {
-    //       tv_sec: 0,
-    //       tv_nsec: 0,
-    //     };
-    //   }
-    //   break;
-    // }
-
     if n_read <= 0 {
-      // a signal interrupted
+      // shouldn't really be possible to get here
       None
     } else {
       Some(input)

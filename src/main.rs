@@ -80,7 +80,8 @@ fn selector<'a>(
         }
       }
       None => {
-        terminal.print("signal")?;
+        terminal.print("s")?;
+        terminal.flush();
       }
     };
   }
