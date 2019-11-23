@@ -59,9 +59,8 @@ fn selector<'a>(
   loop {
     let data = input_reader.read()?;
     if data[0] == 0 {
-      // nothing was read due to signal interrupt
-      terminal.print("s")?;
-      terminal.flush();
+      // signal interrupt, redraw screen in case it was WINCH
+      draw_matches(&mut terminal, &choices, height, selected)?;
     } else {
       let str_ptr_result = unsafe { CStr::from_ptr(data.as_ptr() as *mut i8) }.to_str();
       match str_ptr_result {
@@ -70,12 +69,18 @@ fn selector<'a>(
             break;
           }
 
-          // terminal.print(input)?;
-          terminal.print(&input.chars().count().to_string())?;
-          terminal.print("-")?;
-          terminal.print(&input.len().to_string())?;
-          terminal.print(";")?;
-          terminal.flush();
+          let mut chars = input.chars();
+          let first_char = chars.next();
+          if first_char.is_none() {
+            continue;
+          }
+
+          if first_char.unwrap().is_ascii_control() {
+            // TODO: look up key mapping
+          } else {
+            terminal.print(input)?;
+            terminal.flush();
+          }
         }
         Err(_) => {
           return Err(Error::new(ErrorKind::Other, "Could not convert string"));
