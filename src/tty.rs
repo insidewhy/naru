@@ -197,7 +197,9 @@ macro_rules! uninit_mem {
 }
 
 impl TtyReader {
-  pub fn read(&self) -> Option<[u8; 5]> {
+  pub fn read(&self) -> io::Result<[u8; 5]> {
+    let mut input: [u8; 5] = [0; 5];
+
     // pselect before the read so that the WINCH signal can interrupt
     loop {
       let mut fdset: fd_set = uninit_mem!();
@@ -224,24 +226,16 @@ impl TtyReader {
 
       if err < 0 {
         if Error::last_os_error().raw_os_error() == Some(EINTR) {
-          return None;
+          return Ok(input);
         } else {
-          // TODO: raise error
-          return None;
+          return Err(Error::new(ErrorKind::Other, "Could not read from terminal"));
         }
       } else if unsafe { FD_ISSET(self.fdin, &mut fdset) } {
         break;
       }
     }
 
-    let mut input: [u8; 5] = [0; 5];
-    let n_read = unsafe { read(self.fdin, input.as_mut_ptr() as *mut c_void, 4) };
-
-    if n_read <= 0 {
-      // shouldn't really be possible to get here
-      None
-    } else {
-      Some(input)
-    }
+    unsafe { read(self.fdin, input.as_mut_ptr() as *mut c_void, 4) };
+    Ok(input)
   }
 }
