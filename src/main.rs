@@ -39,8 +39,6 @@ fn draw_matches(
   terminal.print("> ")?;
   terminal.clearline()?;
 
-  terminal.flush();
-
   Ok(())
 }
 
@@ -51,8 +49,12 @@ fn selector<'a>(
 ) -> io::Result<&'a String> {
   let height = std::cmp::min(conf.window.height, terminal.max_height);
 
+  // index of selected item
   let mut selected = 0;
+  let mut criteria = String::new();
+
   draw_matches(&mut terminal, &choices, height, selected)?;
+  terminal.flush();
 
   let input_reader = terminal.get_reader();
 
@@ -61,6 +63,8 @@ fn selector<'a>(
     if data[0] == 0 {
       // signal interrupt, redraw screen in case it was WINCH
       draw_matches(&mut terminal, &choices, height, selected)?;
+      terminal.print(&criteria)?;
+      terminal.flush();
     } else {
       let str_ptr_result = unsafe { CStr::from_ptr(data.as_ptr() as *mut i8) }.to_str();
       match str_ptr_result {
@@ -78,6 +82,7 @@ fn selector<'a>(
           if first_char.unwrap().is_ascii_control() {
             // TODO: look up key mapping
           } else {
+            criteria.push_str(input);
             terminal.print(input)?;
             terminal.flush();
           }
