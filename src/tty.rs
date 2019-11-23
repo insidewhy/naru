@@ -1,5 +1,6 @@
 use libc::{
-  close, fclose, fflush, fileno, fprintf, fputc, ioctl, setvbuf, winsize, TIOCGWINSZ, _IOFBF,
+  c_void, close, fclose, fflush, fileno, fprintf, fputc, ioctl, read, setvbuf, winsize, TIOCGWINSZ,
+  _IOFBF,
 };
 use std::{
   ffi::CString,
@@ -168,6 +169,42 @@ impl Tty {
       unsafe {
         close(self.fdin);
       }
+    }
+  }
+
+  pub fn get_reader(&self) -> TtyReader {
+    TtyReader { fdin: self.fdin }
+  }
+}
+
+pub(crate) struct TtyReader {
+  fdin: i32,
+}
+
+impl TtyReader {
+  pub fn read(&self) -> Option<[u8; 5]> {
+    let mut input: [u8; 5] = [0; 5];
+    let n_read = unsafe { read(self.fdin, input.as_mut_ptr() as *mut c_void, 4) };
+
+    // loop {
+    //   unsafe {
+    //     // let mut fdset: fd_set = std::mem::uninitialized::<libc::fd_set>();
+    //     let mut fdset: fd_set = std::mem::MaybeUninit::zeroed().assume_init();
+    //     FD_ZERO(&mut fdset);
+    //     FD_SET(self.fdin, &mut fdset);
+    //     let timeout = timespec {
+    //       tv_sec: 0,
+    //       tv_nsec: 0,
+    //     };
+    //   }
+    //   break;
+    // }
+
+    if n_read <= 0 {
+      // a signal interrupted
+      None
+    } else {
+      Some(input)
     }
   }
 }

@@ -1,7 +1,11 @@
 mod config;
 mod tty;
 use config::{load_config, Config};
-use std::io;
+use std::ffi::CStr;
+use std::{
+  io,
+  io::{Error, ErrorKind},
+};
 use tty::Tty;
 
 const TTY_PATH: &str = "/dev/tty";
@@ -50,8 +54,36 @@ fn selector<'a>(
   let mut selected = 0;
   draw_matches(&mut terminal, &choices, height, selected)?;
 
-  // TODO: wait for input etc.
-  std::thread::sleep(std::time::Duration::from_secs(1));
+  let reader = terminal.get_reader();
+
+  loop {
+    let data = reader.read();
+    match data {
+      Some(val) => {
+        let str_ptr_result = unsafe { CStr::from_ptr(val.as_ptr() as *mut i8) }.to_str();
+        match str_ptr_result {
+          Ok(input) => {
+            if input == "\r" || input == "\n" {
+              break;
+            }
+
+            // terminal.print(input)?;
+            terminal.print(&input.chars().count().to_string())?;
+            terminal.print("-")?;
+            terminal.print(&input.len().to_string())?;
+            terminal.print(";")?;
+            terminal.flush();
+          }
+          Err(_) => {
+            return Err(Error::new(ErrorKind::Other, "Could not convert string"));
+          }
+        }
+      }
+      None => {
+        terminal.print("signal")?;
+      }
+    };
+  }
 
   Ok(&choices[selected])
 }
