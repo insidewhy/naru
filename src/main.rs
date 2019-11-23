@@ -80,7 +80,22 @@ fn selector<'a>(
           }
 
           if first_char.unwrap().is_ascii_control() {
-            // TODO: look up key mapping
+            // TODO: lookup mapping in configuration, remove hard-coded mappings
+            if input == "\x1b[A" || input == "\x1bOA" {
+              if selected > 0 {
+                selected -= 1;
+                draw_matches(&mut terminal, &choices, height, selected)?;
+                terminal.print(&criteria)?;
+                terminal.flush();
+              }
+            } else if input == "\x1b[B" || input == "\x1bOB" {
+              if selected + 1 < choices.len() {
+                selected += 1;
+                draw_matches(&mut terminal, &choices, height, selected)?;
+                terminal.print(&criteria)?;
+                terminal.flush();
+              }
+            }
           } else {
             criteria.push_str(input);
             terminal.print(input)?;
