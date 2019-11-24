@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use std::io;
+use std::{collections::HashMap, io};
 use toml;
 use xdg;
 
@@ -20,12 +20,16 @@ impl Default for WindowConfig {
 pub(crate) struct Config {
   #[serde(default)]
   pub window: WindowConfig,
+
+  #[serde(default)]
+  pub bindings: HashMap<String, String>,
 }
 
 impl Default for Config {
   fn default() -> Self {
     Self {
       window: Default::default(),
+      bindings: HashMap::new(),
     }
   }
 }
