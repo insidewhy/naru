@@ -1,3 +1,5 @@
+#[macro_use]
+mod c_str;
 mod config;
 mod selector;
 mod tty;

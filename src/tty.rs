@@ -1,3 +1,4 @@
+use crate::c_str;
 use libc::{
   c_int, c_void, close, fclose, fd_set, fflush, fileno, fprintf, fputc, ioctl, pselect, read,
   setvbuf, sigemptyset, sighandler_t, signal, sigset_t, winsize, EINTR, FD_ISSET, FD_SET, FD_ZERO,
@@ -9,9 +10,6 @@ use std::{
   io::{Error, ErrorKind},
 };
 use termios::{tcsetattr, Termios, ECHO, ICANON, ICRNL, ISIG, TCSANOW};
-#[macro_use]
-#[path = "c_str.rs"]
-mod c_str;
 
 // Make unsafe call and turn non-zero exit statuses into an io error with the given string when
 // needed
