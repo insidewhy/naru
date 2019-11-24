@@ -46,27 +46,21 @@ fn parse_bindings(bindings: HashMap<String, String>) -> io::Result<HashMap<Strin
     .map(|(binding, action_name): (&String, &String)| {
       if binding.starts_with("c-") {
         if binding.len() != 3 {
-          return other_error!(format!(
+          return other_error!(
             "Invalid binding, only one character allowed after c-: {}",
             binding
-          ));
+          );
         }
         let last_char = binding.bytes().last().unwrap();
         if last_char < b'a' || last_char > b'z' {
-          return other_error!(format!(
-            "Invalid binding, only a-z allowed after c-: {}",
-            binding
-          ));
+          return other_error!("Invalid binding, only a-z allowed after c-: {}", binding);
         }
 
         // I feel like there should be a better way to do this
         let control_code = String::from_utf8_lossy(&[last_char - b'`']).to_string();
         return Ok((control_code, action_name.clone()));
       } else {
-        return other_error!(format!(
-          "Invalid binding, only a-z allowed after c-: {}",
-          binding
-        ));
+        return other_error!("Invalid binding, only a-z allowed after c-: {}", binding);
       }
     })
     .collect()

@@ -13,6 +13,10 @@ macro_rules! other_error {
   ($message: expr) => {
     Err(Error::new(ErrorKind::Other, $message))
   };
+
+  ($($message: expr),+) => {
+    Err(Error::new(ErrorKind::Other, format!( $($message,)+ )))
+  };
 }
 
 const TTY_PATH: &str = "/dev/tty";
