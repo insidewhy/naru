@@ -60,7 +60,7 @@ fn parse_bindings(bindings: HashMap<String, String>) -> io::Result<HashMap<Strin
         let control_code = String::from_utf8_lossy(&[last_char - b'`']).to_string();
         return Ok((control_code, action_name.clone()));
       } else {
-        return other_error!("Invalid binding, only a-z allowed after c-: {}", binding);
+        return other_error!("Invalid binding, must start with c-: {}", binding);
       }
     })
     .collect()
