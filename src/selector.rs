@@ -18,10 +18,7 @@ macro_rules! def_action_names {
 macro_rules! def_default_mappings {
   ($actions: ident, $($name: expr => $mapping: ident);+;) => {{
     $(
-      let name_str = $name.to_string();
-      if ! $actions.contains_key(&name_str) {
-        $actions.insert(name_str, Self::$mapping);
-      }
+      $actions.entry($name.to_string()).or_insert(Self::$mapping);
     )+
   }};
 }
@@ -118,7 +115,7 @@ impl<'a, 'b> Selector<'a, 'b> {
       let choice = &self.choices[line_idx];
 
       if line_idx == self.selected {
-        // this ensures that the invert sgr is not reset by a reset byte
+        // this ensures that the invert sgr is not cleared by a reset byte
         let last_sgr_byte = find_last_sgr_byte(choice.as_bytes());
         if last_sgr_byte != 0 {
           self.terminal.print(&choice[0..last_sgr_byte])?;
