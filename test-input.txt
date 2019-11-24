@@ -1,6 +1,6 @@
 Pump
-\033[0;31mChristmas friend
-\033[0mThis here is a song
+\033[0;31mChristmas friend\033[0m
+This here is a song
 It's about John W Smoke's Mom
 It's with his Mom
 It's about his mom it's about his mom
