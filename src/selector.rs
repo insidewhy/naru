@@ -115,12 +115,22 @@ impl<'a, 'b> Selector<'a, 'b> {
 
     for line_idx in 0..line_count - 1 {
       self.terminal.newline()?;
+      let choice = &self.choices[line_idx];
 
       if line_idx == self.selected {
-        self.terminal.set_invert()?;
+        // this ensures that the invert sgr is not reset by a reset byte
+        let last_sgr_byte = find_last_sgr_byte(choice.as_bytes());
+        if last_sgr_byte != 0 {
+          self.terminal.print(&choice[0..last_sgr_byte])?;
+          self.terminal.print(";7")?;
+          self.terminal.print(&choice[last_sgr_byte..])?;
+        } else {
+          self.terminal.set_invert()?;
+          self.terminal.print(choice)?;
+        }
+      } else {
+        self.terminal.print(choice)?;
       }
-
-      self.terminal.print(self.choices[line_idx].as_str())?;
 
       if line_idx == self.selected {
         self.terminal.set_normal()?;
@@ -181,5 +191,51 @@ impl<'a, 'b> Selector<'a, 'b> {
       selector.redraw()?;
     }
     Ok(())
+  }
+}
+
+// This finds the last byte of an SGR control sequence at the start of the given bytes. When the
+// bytes begin with two or more consecutive SGR control sequences it returns the last byte of the
+// final SGR control sequence.
+fn find_last_sgr_byte(bytes: &[u8]) -> usize {
+  let mut last_sgr = 0;
+  let mut i = 0;
+  let len = bytes.len();
+
+  loop {
+    if i > len - 4 {
+      return last_sgr;
+    }
+
+    if bytes[i] != b'\x1b' {
+      return last_sgr;
+    }
+    i += 1;
+    if bytes[i] != b'[' {
+      return last_sgr;
+    }
+    i += 1;
+    if bytes[i] < b'0' || bytes[i] > b'9' {
+      return last_sgr;
+    }
+
+    loop {
+      i += 1;
+      if i >= len {
+        return last_sgr;
+      }
+
+      if (bytes[i] >= b'0' && bytes[i] <= b'9') || bytes[i] == b';' {
+        continue;
+      }
+
+      if bytes[i] == b'm' {
+        last_sgr = i;
+        i += 1;
+        break;
+      } else {
+        return last_sgr;
+      }
+    }
   }
 }
