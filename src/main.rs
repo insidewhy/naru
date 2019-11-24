@@ -8,6 +8,13 @@ use selector::Selector;
 use std::io;
 use tty::Tty;
 
+#[macro_export]
+macro_rules! other_error {
+  ($message: expr) => {
+    Err(Error::new(ErrorKind::Other, $message))
+  };
+}
+
 const TTY_PATH: &str = "/dev/tty";
 
 fn match_input(conf: &Config) -> io::Result<()> {

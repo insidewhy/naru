@@ -1,4 +1,4 @@
-use crate::{config::Config, tty::Tty};
+use crate::{config::Config, other_error, tty::Tty};
 
 use std::{
   collections::HashMap,
@@ -7,12 +7,23 @@ use std::{
   io::{Error, ErrorKind},
 };
 
-macro_rules! def_mappings {
-  ($actions: ident, $($name: expr => $mapping: ident);+;) => {
+macro_rules! def_action_names {
+  ($actions_by_name: ident, $($name: expr => $mapping: ident);+;) => {
     $(
-      $actions.insert($name.to_string(), Self::$mapping);
+      $actions_by_name.insert($name.to_string(), Self::$mapping);
     )+
   };
+}
+
+macro_rules! def_default_mappings {
+  ($actions: ident, $($name: expr => $mapping: ident);+;) => {{
+    $(
+      let name_str = $name.to_string();
+      if ! $actions.contains_key(&name_str) {
+        $actions.insert(name_str, Self::$mapping);
+      }
+    )+
+  }};
 }
 
 pub(crate) struct Selector<'a, 'b> {
@@ -49,7 +60,7 @@ impl<'a, 'b> Selector<'a, 'b> {
     self.draw_matches()?;
     self.terminal.flush();
 
-    let actions = Self::build_actions();
+    let actions = Self::build_actions(&self.conf.bindings)?;
     let input_reader = self.terminal.get_reader();
 
     loop {
@@ -83,7 +94,7 @@ impl<'a, 'b> Selector<'a, 'b> {
             }
           }
           Err(_) => {
-            return Err(Error::new(ErrorKind::Other, "Could not convert string"));
+            return other_error!("Could not convert string");
           }
         }
       }
@@ -126,16 +137,34 @@ impl<'a, 'b> Selector<'a, 'b> {
     Ok(())
   }
 
-  fn build_actions() -> HashMap<String, fn(&mut Self) -> io::Result<()>> {
+  fn build_actions(
+    bindings: &HashMap<String, String>,
+  ) -> io::Result<HashMap<String, fn(&mut Self) -> io::Result<()>>> {
+    let mut actions_by_name: HashMap<String, fn(&mut Self) -> io::Result<()>> = HashMap::new();
+    def_action_names!(
+      actions_by_name,
+      "select-prev" => select_prev;
+      "select-next" => select_next;
+    );
+
     let mut actions: HashMap<_, fn(&mut Self) -> io::Result<()>> = HashMap::new();
-    def_mappings!(
+    for (a, b) in bindings {
+      let action = actions_by_name.get(b);
+      if !action.is_some() {
+        return other_error!(format!("Invalid action name {}", b));
+      }
+
+      actions.insert(a.clone(), *action.unwrap());
+    }
+
+    def_default_mappings!(
       actions,
       "\x1b[A" => select_prev;
       "\x1bOA" => select_prev;
       "\x1b[B" => select_next;
       "\x1bOB" => select_next;
     );
-    actions
+    Ok(actions)
   }
 
   fn select_next(selector: &mut Self) -> io::Result<()> {

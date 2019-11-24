@@ -1,4 +1,4 @@
-use crate::c_str;
+use crate::{c_str, other_error};
 use libc::{
   c_int, c_void, close, fclose, fd_set, fflush, fileno, fprintf, fputc, ioctl, pselect, read,
   setvbuf, sigemptyset, sighandler_t, signal, sigset_t, winsize, EINTR, FD_ISSET, FD_SET, FD_ZERO,
@@ -226,7 +226,7 @@ impl TtyReader {
         if Error::last_os_error().raw_os_error() == Some(EINTR) {
           return Ok(input);
         } else {
-          return Err(Error::new(ErrorKind::Other, "Could not read from terminal"));
+          return other_error!("Could not read from terminal");
         }
       } else if unsafe { FD_ISSET(self.fdin, &mut fdset) } {
         break;
