@@ -7,6 +7,14 @@ use std::{
   io::{Error, ErrorKind},
 };
 
+macro_rules! def_mappings {
+  ($actions: ident, $($name: expr => $mapping: ident);+;) => {
+    $(
+      $actions.insert($name.to_string(), Self::$mapping);
+    )+
+  };
+}
+
 pub(crate) struct Selector<'a, 'b> {
   // inputs
   terminal: &'a mut Tty,
@@ -120,10 +128,13 @@ impl<'a, 'b> Selector<'a, 'b> {
 
   fn build_actions() -> HashMap<String, fn(&mut Self) -> io::Result<()>> {
     let mut actions: HashMap<_, fn(&mut Self) -> io::Result<()>> = HashMap::new();
-    actions.insert("\x1b[A".to_string(), Self::select_prev);
-    actions.insert("\x1bOA".to_string(), Self::select_prev);
-    actions.insert("\x1b[B".to_string(), Self::select_next);
-    actions.insert("\x1bOB".to_string(), Self::select_next);
+    def_mappings!(
+      actions,
+      "\x1b[A" => select_prev;
+      "\x1bOA" => select_prev;
+      "\x1b[B" => select_next;
+      "\x1bOB" => select_next;
+    );
     actions
   }
 
