@@ -1,6 +1,7 @@
 use crate::{config::Config, tty::Tty};
 
 use std::{
+  collections::HashMap,
   ffi::CStr,
   io,
   io::{Error, ErrorKind},
@@ -40,6 +41,7 @@ impl<'a, 'b> Selector<'a, 'b> {
     self.draw_matches()?;
     self.terminal.flush();
 
+    let actions = Self::build_actions();
     let input_reader = self.terminal.get_reader();
 
     loop {
@@ -62,17 +64,9 @@ impl<'a, 'b> Selector<'a, 'b> {
             }
 
             if first_char.unwrap().is_ascii_control() {
-              // TODO: lookup mapping in configuration, remove hard-coded mappings
-              if input == "\x1b[A" || input == "\x1bOA" {
-                if self.selected > 0 {
-                  self.selected -= 1;
-                  self.redraw()?;
-                }
-              } else if input == "\x1b[B" || input == "\x1bOB" {
-                if self.selected + 1 < self.choices.len() {
-                  self.selected += 1;
-                  self.redraw()?;
-                }
+              let action = actions.get(input);
+              if action.is_some() {
+                action.unwrap()(self)?;
               }
             } else {
               self.criteria.push_str(input);
@@ -121,6 +115,31 @@ impl<'a, 'b> Selector<'a, 'b> {
     self.terminal.print("> ")?;
     self.terminal.clearline()?;
 
+    Ok(())
+  }
+
+  fn build_actions() -> HashMap<String, fn(&mut Self) -> io::Result<()>> {
+    let mut actions: HashMap<_, fn(&mut Self) -> io::Result<()>> = HashMap::new();
+    actions.insert("\x1b[A".to_string(), Self::select_prev);
+    actions.insert("\x1bOA".to_string(), Self::select_prev);
+    actions.insert("\x1b[B".to_string(), Self::select_next);
+    actions.insert("\x1bOB".to_string(), Self::select_next);
+    actions
+  }
+
+  fn select_next(selector: &mut Self) -> io::Result<()> {
+    if selector.selected + 1 < selector.choices.len() {
+      selector.selected += 1;
+      selector.redraw()?;
+    }
+    Ok(())
+  }
+
+  fn select_prev(selector: &mut Self) -> io::Result<()> {
+    if selector.selected > 0 {
+      selector.selected -= 1;
+      selector.redraw()?;
+    }
     Ok(())
   }
 }
