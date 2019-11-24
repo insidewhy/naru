@@ -1,8 +1,7 @@
-use crate::config::Config;
-use crate::tty::Tty;
+use crate::{config::Config, tty::Tty};
 
-use std::ffi::CStr;
 use std::{
+  ffi::CStr,
   io,
   io::{Error, ErrorKind},
 };
