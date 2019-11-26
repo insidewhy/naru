@@ -283,3 +283,18 @@ pub(crate) fn find_last_sgr_byte(bytes: &[u8]) -> usize {
     }
   }
 }
+
+macro_rules! def_keys {
+  ($($name: ident => $string: expr);+;) => {
+    $(
+      pub(crate) const $name: &str =$string;
+    )+
+  };
+}
+
+def_keys! {
+  KEY_UP => "\x1b[A";
+  KEY_UP_ALTERNATE => "\x1bOA";
+  KEY_DOWN => "\x1b[B";
+  KEY_DOWN_ALTERNATE => "\x1bOB";
+}

@@ -1,8 +1,4 @@
-use crate::{
-  config::Config,
-  other_error,
-  tty::{find_last_sgr_byte, Tty},
-};
+use crate::{config::Config, other_error, tty, tty::Tty};
 
 use std::{
   collections::HashMap,
@@ -120,7 +116,7 @@ impl<'a, 'b> Selector<'a, 'b> {
 
       if line_idx == self.selected {
         // this ensures that the invert sgr is not cleared by a reset byte
-        let last_sgr_byte = find_last_sgr_byte(choice.as_bytes());
+        let last_sgr_byte = tty::find_last_sgr_byte(choice.as_bytes());
         if last_sgr_byte != 0 {
           self.terminal.print(&choice[0..last_sgr_byte])?;
           self.terminal.print(";7")?;
@@ -170,10 +166,10 @@ impl<'a, 'b> Selector<'a, 'b> {
 
     def_default_mappings!(
       actions,
-      "\x1b[A" => select_prev;
-      "\x1bOA" => select_prev;
-      "\x1b[B" => select_next;
-      "\x1bOB" => select_next;
+      tty::KEY_UP => select_prev;
+      tty::KEY_UP_ALTERNATE => select_prev;
+      tty::KEY_DOWN => select_next;
+      tty::KEY_DOWN_ALTERNATE => select_next;
     );
     Ok(actions)
   }
