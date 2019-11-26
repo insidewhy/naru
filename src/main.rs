@@ -5,17 +5,17 @@ mod selector;
 mod tty;
 use config::{load_config, Config};
 use selector::Selector;
-use std::io;
+use std::{error::Error, io, io::ErrorKind};
 use tty::Tty;
 
 #[macro_export]
 macro_rules! other_error {
   ($message: expr) => {
-    Err(Error::new(ErrorKind::Other, $message))
+    Err(std::io::Error::new(std::io::ErrorKind::Other, $message))
   };
 
   ($($message: expr),+) => {
-    Err(Error::new(ErrorKind::Other, format!( $($message,)+ )))
+    Err(std::io::Error::new(std::io::ErrorKind::Other, format!( $($message,)+ )))
   };
 }
 
@@ -53,7 +53,16 @@ fn match_input(conf: &Config) -> io::Result<()> {
 }
 
 fn main() -> io::Result<()> {
-  let conf = load_config()?;
-  match_input(&conf)?;
-  Ok(())
+  let result = {
+    let conf = load_config()?;
+    match_input(&conf)
+  };
+
+  match result {
+    Err(ref e) if e.kind() == ErrorKind::Other => {
+      eprintln!("{}", e.description());
+      Ok(())
+    }
+    default => default,
+  }
 }

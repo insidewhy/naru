@@ -1,11 +1,6 @@
 use crate::{config::Config, other_error, tty, tty::Tty};
 
-use std::{
-  collections::HashMap,
-  ffi::CStr,
-  io,
-  io::{Error, ErrorKind},
-};
+use std::{collections::HashMap, ffi::CStr, io};
 
 macro_rules! def_action_names {
   ($actions_by_name: ident, $($name: expr => $mapping: ident);+;) => {
@@ -158,7 +153,7 @@ impl<'a, 'b> Selector<'a, 'b> {
     for (a, b) in bindings {
       let action = actions_by_name.get(b);
       if !action.is_some() {
-        return other_error!(format!("Invalid action name {}", b));
+        return other_error!(format!("Invalid action name '{}'", b));
       }
 
       actions.insert(a.clone(), *action.unwrap());
@@ -190,4 +185,3 @@ impl<'a, 'b> Selector<'a, 'b> {
     Ok(())
   }
 }
-

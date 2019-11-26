@@ -4,11 +4,7 @@ use libc::{
   setvbuf, sigemptyset, sighandler_t, signal, sigset_t, winsize, EINTR, FD_ISSET, FD_SET, FD_ZERO,
   SIGWINCH, TIOCGWINSZ, _IOFBF,
 };
-use std::{
-  ffi::CString,
-  io,
-  io::{Error, ErrorKind},
-};
+use std::{ffi::CString, io, io::Error};
 use termios::{tcsetattr, Termios, ECHO, ICANON, ICRNL, ISIG, TCSANOW};
 
 // Make unsafe call and turn non-zero exit statuses into an io error with the given string when
@@ -16,7 +12,7 @@ use termios::{tcsetattr, Termios, ECHO, ICANON, ICRNL, ISIG, TCSANOW};
 macro_rules! fwd_error_code {
   ($expr: expr, $msg: expr) => {
     if unsafe { $expr != 0 } {
-      return Err(Error::new(ErrorKind::Other, $msg));
+      return other_error!($msg);
     }
   };
 }
@@ -24,7 +20,7 @@ macro_rules! fwd_error_code {
 macro_rules! terminal_printf {
   ($self: expr, $($expr: expr),+) => {
     if unsafe { fprintf($self.fout, $($expr),+) < 0 } {
-      return Err(Error::new(ErrorKind::Other, "Error printing to console"))
+      return other_error!("Error printing to console")
     }
   }
 }
