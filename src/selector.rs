@@ -1,4 +1,8 @@
-use crate::{config::Config, other_error, tty::Tty};
+use crate::{
+  config::Config,
+  other_error,
+  tty::{find_last_sgr_byte, Tty},
+};
 
 use std::{
   collections::HashMap,
@@ -191,48 +195,3 @@ impl<'a, 'b> Selector<'a, 'b> {
   }
 }
 
-// This finds the last byte of an SGR control sequence at the start of the given bytes. When the
-// bytes begin with two or more consecutive SGR control sequences it returns the last byte of the
-// final SGR control sequence.
-fn find_last_sgr_byte(bytes: &[u8]) -> usize {
-  let mut last_sgr = 0;
-  let mut i = 0;
-  let len = bytes.len();
-
-  loop {
-    if i > len - 4 {
-      return last_sgr;
-    }
-
-    if bytes[i] != b'\x1b' {
-      return last_sgr;
-    }
-    i += 1;
-    if bytes[i] != b'[' {
-      return last_sgr;
-    }
-    i += 1;
-    if bytes[i] < b'0' || bytes[i] > b'9' {
-      return last_sgr;
-    }
-
-    loop {
-      i += 1;
-      if i >= len {
-        return last_sgr;
-      }
-
-      if (bytes[i] >= b'0' && bytes[i] <= b'9') || bytes[i] == b';' {
-        continue;
-      }
-
-      if bytes[i] == b'm' {
-        last_sgr = i;
-        i += 1;
-        break;
-      } else {
-        return last_sgr;
-      }
-    }
-  }
-}

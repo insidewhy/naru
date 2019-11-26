@@ -101,6 +101,7 @@ impl Tty {
     Ok(())
   }
 
+  /*
   pub fn set_fg(&mut self, color: i32) -> io::Result<()> {
     if self.fg_color != color {
       self.sgr(30 + color)?;
@@ -108,6 +109,7 @@ impl Tty {
     }
     Ok(())
   }
+  */
 
   pub fn set_invert(&self) -> io::Result<()> {
     self.sgr(7)
@@ -136,9 +138,11 @@ impl Tty {
     Ok(())
   }
 
+  /*
   pub fn putc(&self, c: i32) {
     unsafe { fputc(c, self.fout) };
   }
+  */
 
   pub fn print(&self, string: &str) -> io::Result<()> {
     terminal_printf!(self, CString::new(string)?.as_ptr());
@@ -235,5 +239,51 @@ impl TtyReader {
 
     unsafe { read(self.fdin, input.as_mut_ptr() as *mut c_void, 4) };
     Ok(input)
+  }
+}
+
+// This finds the last byte of an SGR control sequence at the start of the given bytes. When the
+// bytes begin with two or more consecutive SGR control sequences it returns the last byte of the
+// final SGR control sequence.
+pub(crate) fn find_last_sgr_byte(bytes: &[u8]) -> usize {
+  let mut last_sgr = 0;
+  let mut i = 0;
+  let len = bytes.len();
+
+  loop {
+    if i > len - 4 {
+      return last_sgr;
+    }
+
+    if bytes[i] != b'\x1b' {
+      return last_sgr;
+    }
+    i += 1;
+    if bytes[i] != b'[' {
+      return last_sgr;
+    }
+    i += 1;
+    if bytes[i] < b'0' || bytes[i] > b'9' {
+      return last_sgr;
+    }
+
+    loop {
+      i += 1;
+      if i >= len {
+        return last_sgr;
+      }
+
+      if (bytes[i] >= b'0' && bytes[i] <= b'9') || bytes[i] == b';' {
+        continue;
+      }
+
+      if bytes[i] == b'm' {
+        last_sgr = i;
+        i += 1;
+        break;
+      } else {
+        return last_sgr;
+      }
+    }
   }
 }
