@@ -51,13 +51,9 @@ pub(crate) struct Tty {
 
 extern "C" fn winch_handler(_: c_int) {}
 
-fn get_winch_handler() -> sighandler_t {
-  winch_handler as extern "C" fn(c_int) as *mut c_void as sighandler_t
-}
-
 impl Tty {
   pub fn new(tty_path: &str) -> io::Result<Tty> {
-    unsafe { signal(SIGWINCH, get_winch_handler()) };
+    unsafe { signal(SIGWINCH, winch_handler as sighandler_t) };
 
     let tty_filename_c = CString::new(tty_path)?;
     let fdin = unsafe { libc::open(tty_filename_c.as_ptr(), libc::O_RDONLY) };
