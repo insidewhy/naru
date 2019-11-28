@@ -1,4 +1,4 @@
-use crate::{c_str, other_error};
+use crate::other_error;
 use libc::{
   c_int, c_void, close, fclose, fd_set, fflush, fileno, fprintf, fputc, ioctl, pselect, read,
   setvbuf, sigemptyset, sighandler_t, signal, sigset_t, winsize, EINTR, FD_ISSET, FD_SET, FD_ZERO,

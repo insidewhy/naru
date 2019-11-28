@@ -15,7 +15,7 @@ impl ConstCStr {
 macro_rules! def_c_str {
   ($($name: ident = $string: expr);+;) => {
     $(
-      const $name: c_str::ConstCStr = c_str::ConstCStr { val: concat!($string, "\0") };
+      const $name: crate::c_str::ConstCStr = crate::c_str::ConstCStr { val: concat!($string, "\0") };
     )+
   };
 }
