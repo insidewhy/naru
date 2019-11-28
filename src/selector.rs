@@ -38,11 +38,17 @@ impl<'a, 'b> Selector<'a, 'b> {
   ) -> Selector<'a, 'b> {
     let max_height = terminal.max_height;
 
+    let height = if conf.window.height > 0 {
+      std::cmp::min(conf.window.height, max_height as i32)
+    } else {
+      std::cmp::max((max_height as i32) + conf.window.height, 1)
+    } as u16;
+
     Selector {
       terminal,
       choices,
       conf,
-      height: std::cmp::min(conf.window.height, max_height),
+      height,
       selected: 0,
       criteria: String::new(),
     }

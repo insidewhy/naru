@@ -1,22 +1,18 @@
 use crate::other_error;
 use serde::Deserialize;
-use std::{
-  collections::HashMap,
-  io,
-  io::{Error, ErrorKind},
-};
+use std::{collections::HashMap, io};
 use toml;
 use xdg;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct WindowConfig {
-  pub height: u16,
+  pub height: i32,
 }
 
 impl Default for WindowConfig {
   fn default() -> Self {
-    Self { height: 20 }
+    Self { height: 0 }
   }
 }
 

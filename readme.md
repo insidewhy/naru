@@ -18,14 +18,14 @@ The configuration file uses the `toml` format, here is an example showing the de
 
 ```toml
 [window]
-height = 20
+height = 0
 
 [bindings]
-c-n = "select-next"
-c-e = "select-prev"
 c-j = "select-next"
 c-k = "select-prev"
 ```
+
+For `window.height`, positive numbers specify the height in lines, 0 means "full height" and the negative number `-n` means `full_height - n`.
 
 ## Using with neovim-fuzzy
 
