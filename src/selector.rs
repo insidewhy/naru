@@ -109,13 +109,22 @@ impl<'a, 'b> Selector<'a, 'b> {
   }
 
   fn draw_matches(&mut self) -> io::Result<()> {
-    let line_count = std::cmp::min(self.height as usize, self.choices.len() + 1);
+    let visible_choice_count = std::cmp::min((self.height - 1) as usize, self.choices.len());
+    let first_visible_choice_idx = if self.selected >= visible_choice_count {
+      std::cmp::min(
+        self.selected - visible_choice_count + 1,
+        self.choices.len() - visible_choice_count + 1,
+      )
+    } else {
+      0
+    };
 
-    for line_idx in 0..line_count - 1 {
+    for line_idx in 0..visible_choice_count {
       self.terminal.newline()?;
-      let choice = &self.choices[line_idx];
+      let choice_idx = line_idx + first_visible_choice_idx;
+      let choice = &self.choices[choice_idx];
 
-      if line_idx == self.selected {
+      if choice_idx == self.selected {
         // this ensures that the invert sgr is not cleared by a reset byte
         let last_sgr_byte = tty::find_last_sgr_byte(choice.as_bytes());
         if last_sgr_byte != 0 {
@@ -130,13 +139,14 @@ impl<'a, 'b> Selector<'a, 'b> {
         self.terminal.print(choice)?;
       }
 
-      if line_idx == self.selected {
+      if choice_idx == self.selected {
         self.terminal.set_normal()?;
       }
     }
 
     // move to the "top"
-    self.terminal.move_up((line_count - 1) as i32)?;
+    self.terminal.clearline()?;
+    self.terminal.move_up(visible_choice_count as i32)?;
     self.terminal.set_normal()?;
     self.terminal.set_col(0)?;
     self.terminal.print("> ")?;
