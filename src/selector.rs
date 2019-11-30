@@ -111,10 +111,7 @@ impl<'a, 'b> Selector<'a, 'b> {
   fn draw_matches(&mut self) -> io::Result<()> {
     let visible_choice_count = std::cmp::min((self.height - 1) as usize, self.choices.len());
     let first_visible_choice_idx = if self.selected >= visible_choice_count {
-      std::cmp::min(
-        self.selected - visible_choice_count + 1,
-        self.choices.len() - visible_choice_count + 1,
-      )
+      self.selected - visible_choice_count + 1
     } else {
       0
     };
