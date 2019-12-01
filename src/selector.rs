@@ -65,34 +65,34 @@ impl<'a, 'b> Selector<'a, 'b> {
       if data[0] == 0 {
         // signal interrupt, redraw screen in case it was WINCH
         self.redraw()?;
-      } else {
-        let str_ptr_result = unsafe { CStr::from_ptr(data.as_ptr() as *mut i8) }.to_str();
-        match str_ptr_result {
-          Ok(input) => {
-            if input == "\r" || input == "\n" {
-              break;
-            }
-
-            let mut chars = input.chars();
-            let first_char = chars.next();
-            if first_char.is_none() {
-              continue;
-            }
-
-            if first_char.unwrap().is_ascii_control() {
-              let action = actions.get(input);
-              if action.is_some() {
-                action.unwrap()(self)?;
-              }
-            } else {
-              self.criteria.push_str(input);
-              self.terminal.print(input)?;
-              self.terminal.flush();
-            }
+        continue;
+      }
+      let str_ptr_result = unsafe { CStr::from_ptr(data.as_ptr() as *mut i8) }.to_str();
+      match str_ptr_result {
+        Ok(input) => {
+          if input == "\r" || input == "\n" {
+            break;
           }
-          Err(_) => {
-            return other_error!("Could not convert string");
+
+          let mut chars = input.chars();
+          let first_char = chars.next();
+          if first_char.is_none() {
+            continue;
           }
+
+          if first_char.unwrap().is_ascii_control() {
+            let action = actions.get(input);
+            if action.is_some() {
+              action.unwrap()(self)?;
+            }
+          } else {
+            self.criteria.push_str(input);
+            self.terminal.print(input)?;
+            self.terminal.flush();
+          }
+        }
+        Err(_) => {
+          return other_error!("Could not convert string");
         }
       }
     }
