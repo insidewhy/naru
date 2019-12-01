@@ -1,4 +1,4 @@
-use crate::{config::Config, other_error, tty, tty::Tty};
+use crate::{config::Config, control_key, other_error, tty, tty::Tty};
 
 use std::{collections::HashMap, ffi::CStr, io};
 
@@ -74,7 +74,7 @@ impl<'a, 'b> Selector<'a, 'b> {
       let str_ptr_result = unsafe { CStr::from_ptr(data.as_ptr() as *mut i8) }.to_str();
       match str_ptr_result {
         Ok(input) => {
-          if input == "\r" || input == "\n" {
+          if input == "\r" {
             break;
           }
 
@@ -117,7 +117,7 @@ impl<'a, 'b> Selector<'a, 'b> {
       self.first_visible_choice_idx = self.selected + 1 - visible_choice_count;
     } else if self.selected < self.first_visible_choice_idx {
       self.first_visible_choice_idx = self.selected;
-    };
+    }
 
     for line_idx in 0..visible_choice_count {
       self.terminal.newline()?;
@@ -179,7 +179,11 @@ impl<'a, 'b> Selector<'a, 'b> {
       actions,
       tty::KEY_UP => select_prev;
       tty::KEY_UP_ALTERNATE => select_prev;
+      control_key!(b'k') => select_prev;
+      control_key!(b'e') => select_prev;
       tty::KEY_DOWN => select_next;
+      control_key!(b'j') => select_next;
+      control_key!(b'n') => select_next;
       tty::KEY_DOWN_ALTERNATE => select_next;
     );
     Ok(actions)

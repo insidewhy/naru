@@ -1,4 +1,4 @@
-use crate::other_error;
+use crate::{def_c_str, other_error};
 use libc::{
   c_int, c_void, close, fclose, fd_set, fflush, fileno, fprintf, fputc, ioctl, pselect, read,
   setvbuf, sigemptyset, sighandler_t, signal, sigset_t, winsize, EINTR, FD_ISSET, FD_SET, FD_ZERO,
@@ -293,4 +293,11 @@ def_keys! {
   KEY_UP_ALTERNATE => "\x1bOA";
   KEY_DOWN => "\x1b[B";
   KEY_DOWN_ALTERNATE => "\x1bOB";
+}
+
+#[macro_export]
+macro_rules! control_key {
+  ($char: expr) => {
+    String::from_utf8_lossy(&[($char.to_ascii_uppercase() - b'@')])
+  };
 }
