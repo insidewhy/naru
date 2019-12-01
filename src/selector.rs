@@ -28,6 +28,9 @@ pub(crate) struct Selector<'a, 'b> {
   height: usize,
   selected: usize,
   criteria: String,
+
+  // first visible choice, used like a sliding window the user pushes around
+  first_visible_choice_idx: usize,
 }
 
 impl<'a, 'b> Selector<'a, 'b> {
@@ -50,6 +53,7 @@ impl<'a, 'b> Selector<'a, 'b> {
       height,
       selected: 0,
       criteria: String::new(),
+      first_visible_choice_idx: 0,
     }
   }
 
@@ -109,15 +113,15 @@ impl<'a, 'b> Selector<'a, 'b> {
 
   fn draw_matches(&mut self) -> io::Result<()> {
     let visible_choice_count = std::cmp::min(self.height - 1, self.choices.len());
-    let first_visible_choice_idx = if self.selected >= visible_choice_count {
-      self.selected - visible_choice_count + 1
-    } else {
-      0
+    if self.selected >= self.first_visible_choice_idx + visible_choice_count {
+      self.first_visible_choice_idx = self.selected + 1 - visible_choice_count;
+    } else if self.selected < self.first_visible_choice_idx {
+      self.first_visible_choice_idx = self.selected;
     };
 
     for line_idx in 0..visible_choice_count {
       self.terminal.newline()?;
-      let choice_idx = line_idx + first_visible_choice_idx;
+      let choice_idx = line_idx + self.first_visible_choice_idx;
       let choice = &self.choices[choice_idx];
 
       if choice_idx == self.selected {
