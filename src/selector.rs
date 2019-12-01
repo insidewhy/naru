@@ -25,7 +25,7 @@ pub(crate) struct Selector<'a, 'b> {
   conf: &'b Config,
 
   // min of terminal height or config height
-  height: u16,
+  height: usize,
   selected: usize,
   criteria: String,
 }
@@ -36,13 +36,12 @@ impl<'a, 'b> Selector<'a, 'b> {
     choices: &'b Vec<String>,
     conf: &'b Config,
   ) -> Selector<'a, 'b> {
-    let max_height = terminal.max_height;
-
+    let max_height = terminal.max_height as usize;
     let height = if conf.window.height > 0 {
-      std::cmp::min(conf.window.height, max_height as i32)
+      std::cmp::min(conf.window.height as usize, max_height)
     } else {
-      std::cmp::max((max_height as i32) + conf.window.height, 1)
-    } as u16;
+      std::cmp::max(max_height + (conf.window.height as usize), 1)
+    };
 
     Selector {
       terminal,
@@ -109,7 +108,7 @@ impl<'a, 'b> Selector<'a, 'b> {
   }
 
   fn draw_matches(&mut self) -> io::Result<()> {
-    let visible_choice_count = std::cmp::min((self.height - 1) as usize, self.choices.len());
+    let visible_choice_count = std::cmp::min(self.height - 1, self.choices.len());
     let first_visible_choice_idx = if self.selected >= visible_choice_count {
       self.selected - visible_choice_count + 1
     } else {
