@@ -28,7 +28,10 @@ fn match_input(conf: &Config) -> io::Result<()> {
     if n == 0 {
       break;
     }
-    choices.push(input.trim().to_string());
+    let trimmed = input.trim();
+    if trimmed.len() != 0 {
+      choices.push(trimmed.to_string());
+    }
     input.clear();
   }
 

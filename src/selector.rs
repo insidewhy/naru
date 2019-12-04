@@ -1,4 +1,5 @@
 use crate::{config::Config, control_key, other_error, tty, tty::Tty};
+use sublime_fuzzy::best_match;
 
 use std::{collections::HashMap, ffi::CStr, io};
 
@@ -18,10 +19,18 @@ macro_rules! def_default_mappings {
   }};
 }
 
+struct Match<'a> {
+  // match ranges
+  choice: &'a String,
+  ranges: Vec<(usize, usize)>,
+  score: isize,
+}
+
 pub(crate) struct Selector<'a, 'b> {
   // inputs
   terminal: &'a mut Tty,
   choices: &'b Vec<String>,
+  matches: Vec<Match<'b>>,
   conf: &'b Config,
 
   // min of terminal height or config height
@@ -30,7 +39,7 @@ pub(crate) struct Selector<'a, 'b> {
   criteria: String,
 
   // first visible choice, used like a sliding window the user pushes around
-  first_visible_choice_idx: usize,
+  first_visible_option_idx: usize,
 }
 
 impl<'a, 'b> Selector<'a, 'b> {
@@ -49,16 +58,17 @@ impl<'a, 'b> Selector<'a, 'b> {
     Selector {
       terminal,
       choices,
+      matches: Vec::new(),
       conf,
       height,
       selected: 0,
       criteria: String::new(),
-      first_visible_choice_idx: 0,
+      first_visible_option_idx: 0,
     }
   }
 
   pub fn get_match(&mut self) -> io::Result<&'b String> {
-    self.draw_matches()?;
+    self.draw_options()?;
     self.terminal.flush();
 
     let actions = Self::build_actions(&self.conf.bindings)?;
@@ -93,6 +103,7 @@ impl<'a, 'b> Selector<'a, 'b> {
             self.criteria.push_str(input);
             self.terminal.print(input)?;
             self.terminal.flush();
+            self.update_matches()?;
           }
         }
         Err(_) => {
@@ -101,27 +112,55 @@ impl<'a, 'b> Selector<'a, 'b> {
       }
     }
 
-    Ok(&self.choices[self.selected])
+    if self.criteria.len() == 0 {
+      Ok(&self.choices[self.selected])
+    } else {
+      Ok(self.matches[self.selected].choice)
+    }
   }
 
   fn redraw(&mut self) -> io::Result<()> {
-    self.draw_matches()?;
+    self.draw_options()?;
     self.terminal.print(&self.criteria)?;
     self.terminal.flush();
     Ok(())
   }
 
-  fn draw_matches(&mut self) -> io::Result<()> {
-    let visible_choice_count = std::cmp::min(self.height - 1, self.choices.len());
-    if self.selected >= self.first_visible_choice_idx + visible_choice_count {
-      self.first_visible_choice_idx = self.selected + 1 - visible_choice_count;
-    } else if self.selected < self.first_visible_choice_idx {
-      self.first_visible_choice_idx = self.selected;
+  // draw choices if there are no criteria, otherwise draw matches
+  fn draw_options(&mut self) -> io::Result<()> {
+    let has_criteria = self.criteria.len() != 0;
+    let option_count = if has_criteria {
+      self.matches.len()
+    } else {
+      self.choices.len()
+    };
+
+    let visible_option_count = std::cmp::min(self.height - 1, option_count);
+    if self.selected >= self.first_visible_option_idx + visible_option_count {
+      self.first_visible_option_idx = self.selected + 1 - visible_option_count;
+    } else if self.selected < self.first_visible_option_idx {
+      self.first_visible_option_idx = self.selected;
     }
 
-    for line_idx in 0..visible_choice_count {
+    if has_criteria {
+      self.draw_matches(visible_option_count)?;
+    } else {
+      self.draw_choices(visible_option_count)?;
+    }
+
+    // move to the "top"
+    self.terminal.set_normal()?;
+    self.terminal.set_col(0)?;
+    self.terminal.print("> ")?;
+    self.terminal.clearline()?;
+
+    Ok(())
+  }
+
+  fn draw_choices(&mut self, visible_option_count: usize) -> io::Result<()> {
+    for line_idx in 0..visible_option_count {
       self.terminal.newline()?;
-      let choice_idx = line_idx + self.first_visible_choice_idx;
+      let choice_idx = line_idx + self.first_visible_option_idx;
       let choice = &self.choices[choice_idx];
 
       if choice_idx == self.selected {
@@ -144,15 +183,70 @@ impl<'a, 'b> Selector<'a, 'b> {
       }
     }
 
-    // move to the "top"
     self.terminal.clearline()?;
-    self.terminal.move_up(visible_choice_count as i32)?;
-    self.terminal.set_normal()?;
-    self.terminal.set_col(0)?;
-    self.terminal.print("> ")?;
-    self.terminal.clearline()?;
+    self.terminal.move_up(visible_option_count as i32)?;
 
     Ok(())
+  }
+
+  fn draw_matches(&mut self, visible_option_count: usize) -> io::Result<()> {
+    for line_idx in 0..visible_option_count {
+      self.terminal.newline()?;
+      let match_idx = line_idx + self.first_visible_option_idx;
+      let choice = &self.matches[match_idx].choice;
+
+      // TODO: in here also highlight those characters which did match
+      if match_idx == self.selected {
+        // this ensures that the invert sgr is not cleared by a reset byte
+        let last_sgr_byte = tty::find_last_sgr_byte(choice.as_bytes());
+        if last_sgr_byte != 0 {
+          self.terminal.print(&choice[0..last_sgr_byte])?;
+          self.terminal.print(";7")?;
+          self.terminal.print(&choice[last_sgr_byte..])?;
+        } else {
+          self.terminal.set_invert()?;
+          self.terminal.print(choice)?;
+        }
+      } else {
+        self.terminal.print(choice)?;
+      }
+
+      if match_idx == self.selected {
+        self.terminal.set_normal()?;
+      }
+    }
+
+    let screen_height = std::cmp::min(self.height - 1, self.choices.len());
+    for _ in visible_option_count..screen_height {
+      self.terminal.newline()?;
+    }
+
+    self.terminal.clearline()?;
+    self.terminal.move_up(screen_height as i32)?;
+
+    Ok(())
+  }
+
+  fn update_matches(&mut self) -> io::Result<()> {
+    let mut matches: Vec<Match<'b>> = self
+      .choices
+      // TODO: use par_iter from rayon
+      .iter()
+      .map(|choice| match best_match(&self.criteria, choice) {
+        None => None,
+        Some(v) => Some(Match {
+          ranges: v.continuous_matches(),
+          score: v.score(),
+          choice: &choice,
+        }),
+      })
+      .flatten()
+      .collect();
+
+    matches.sort_by(|a, b| b.score.cmp(&a.score));
+    self.selected = 0;
+    self.matches = matches;
+    self.redraw()
   }
 
   fn build_actions(
@@ -163,6 +257,7 @@ impl<'a, 'b> Selector<'a, 'b> {
       actions_by_name,
       "select-prev" => select_prev;
       "select-next" => select_next;
+      "backspace" => backspace;
     );
 
     let mut actions: HashMap<_, fn(&mut Self) -> io::Result<()>> = HashMap::new();
@@ -182,9 +277,12 @@ impl<'a, 'b> Selector<'a, 'b> {
       control_key!(b'k') => select_prev;
       control_key!(b'e') => select_prev;
       tty::KEY_DOWN => select_next;
+      tty::KEY_DOWN_ALTERNATE => select_next;
       control_key!(b'j') => select_next;
       control_key!(b'n') => select_next;
-      tty::KEY_DOWN_ALTERNATE => select_next;
+
+      control_key!(b'h') => backspace;
+      "\x7f" => backspace;
     );
     Ok(actions)
   }
@@ -200,6 +298,15 @@ impl<'a, 'b> Selector<'a, 'b> {
   fn select_prev(selector: &mut Self) -> io::Result<()> {
     if selector.selected > 0 {
       selector.selected -= 1;
+      selector.redraw()?;
+    }
+    Ok(())
+  }
+
+  fn backspace(selector: &mut Self) -> io::Result<()> {
+    if selector.criteria.len() != 0 {
+      selector.criteria.pop();
+      selector.update_matches()?;
       selector.redraw()?;
     }
     Ok(())

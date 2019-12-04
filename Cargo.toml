@@ -1,7 +1,7 @@
 [package]
 edition = "2018"
 name = "naru"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["James Pike <github@chilon.net>"]
 description = "A selector like fzu and fzy"
 repository = "https://github.com/ohjames/naru"
@@ -13,6 +13,7 @@ termios = "~0.3.1"
 toml = "~0.5.5"
 serde = { version = "^1.0.102", features = ["derive"] }
 xdg = "^2.1"
+sublime_fuzzy = "^0.6"
 
 [[bin]]
 name = "naru"

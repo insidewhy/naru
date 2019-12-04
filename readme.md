@@ -32,7 +32,3 @@ For `window.height`, positive numbers specify the height in lines, 0 means "full
 ```vim
 let g:fuzzy_executable = 'naru'
 ```
- 
-# Status
-
-`naru` is still in development, you will not want to use it yet.
