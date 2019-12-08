@@ -214,9 +214,15 @@ impl<'a, 'b> Selector<'a, 'b> {
         self.terminal.set_fg(5)?;
         let range_end = range.0 + range.1;
         self.terminal.print(&choice[range.0..range_end])?;
-        // TODO: if last_sgr != 0 then print that rather than normal
         self.terminal.set_normal()?;
-        if is_selected {
+        if last_sgr_byte != 0 {
+          self.terminal.print(&choice[0..last_sgr_byte])?;
+          if is_selected {
+            self.terminal.print(";7m")?;
+          } else {
+            self.terminal.print("m")?;
+          }
+        } else if is_selected {
           self.terminal.set_invert()?;
         }
         last_range_end = range_end;
