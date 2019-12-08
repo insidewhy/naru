@@ -93,7 +93,6 @@ impl Tty {
     Ok(())
   }
 
-  /*
   pub fn set_fg(&mut self, color: i32) -> io::Result<()> {
     if self.fg_color != color {
       self.sgr(30 + color)?;
@@ -101,7 +100,6 @@ impl Tty {
     }
     Ok(())
   }
-  */
 
   pub fn set_invert(&self) -> io::Result<()> {
     self.sgr(7)

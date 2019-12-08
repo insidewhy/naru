@@ -174,12 +174,9 @@ impl<'a, 'b> Selector<'a, 'b> {
           self.terminal.set_invert()?;
           self.terminal.print(choice)?;
         }
+        self.terminal.set_normal()?;
       } else {
         self.terminal.print(choice)?;
-      }
-
-      if choice_idx == self.selected {
-        self.terminal.set_normal()?;
       }
     }
 
@@ -193,25 +190,42 @@ impl<'a, 'b> Selector<'a, 'b> {
     for line_idx in 0..visible_option_count {
       self.terminal.newline()?;
       let match_idx = line_idx + self.first_visible_option_idx;
-      let choice = &self.matches[match_idx].choice;
+      let thismatch = &self.matches[match_idx];
+      let choice = thismatch.choice;
 
-      // TODO: in here also highlight those characters which did match
-      if match_idx == self.selected {
-        // this ensures that the invert sgr is not cleared by a reset byte
-        let last_sgr_byte = tty::find_last_sgr_byte(choice.as_bytes());
-        if last_sgr_byte != 0 {
-          self.terminal.print(&choice[0..last_sgr_byte])?;
+      let is_selected = match_idx == self.selected;
+
+      let last_sgr_byte = tty::find_last_sgr_byte(choice.as_bytes());
+      if last_sgr_byte != 0 {
+        self.terminal.print(&choice[0..last_sgr_byte])?;
+        if is_selected {
           self.terminal.print(";7")?;
-          self.terminal.print(&choice[last_sgr_byte..])?;
-        } else {
-          self.terminal.set_invert()?;
-          self.terminal.print(choice)?;
         }
-      } else {
-        self.terminal.print(choice)?;
+      } else if is_selected {
+        self.terminal.set_invert()?;
       }
 
-      if match_idx == self.selected {
+      let mut last_range_end = last_sgr_byte;
+      for range in &thismatch.ranges {
+        if last_range_end < range.0 {
+          // print text before the match
+          self.terminal.print(&choice[last_range_end..range.0])?;
+        }
+        self.terminal.set_fg(5)?;
+        let range_end = range.0 + range.1;
+        self.terminal.print(&choice[range.0..range_end])?;
+        // TODO: if last_sgr != 0 then print that rather than normal
+        self.terminal.set_normal()?;
+        if is_selected {
+          self.terminal.set_invert()?;
+        }
+        last_range_end = range_end;
+      }
+      if last_range_end < choice.len() {
+        self.terminal.print(&choice[last_range_end..choice.len()])?;
+      }
+
+      if is_selected {
         self.terminal.set_normal()?;
       }
     }
